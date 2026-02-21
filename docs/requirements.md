@@ -2,7 +2,7 @@
 
 > Phase 2: Requirements
 > Date: 21.02.2026
-> Status: Draft
+> Status: Current
 
 ---
 

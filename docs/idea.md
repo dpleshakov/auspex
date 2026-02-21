@@ -2,7 +2,7 @@
 
 > Phase 1: Discovery
 > Date: 20.02.2026
-> Status: Draft
+> Status: Current
 
 ---
 

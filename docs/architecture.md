@@ -2,7 +2,7 @@
 
 > Phase 4: Architecture
 > Date: 21.02.2026
-> Status: Draft
+> Status: Current
 
 ---
 
