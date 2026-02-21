@@ -20,6 +20,8 @@
 | OAuth2 | golang.org/x/oauth2 | latest |
 | HTTP client (ESI) | standard net/http | — |
 | Static file embedding | standard embed | — |
+| Testing | standard testing | — |
+| Mocks | testify/mock | latest |
 
 ### Frontend
 
@@ -67,6 +69,10 @@ A code generator: takes a SQL schema and SQL queries, generates typed Go code. S
 
 The official extended Go library for OAuth2. Handles the Authorization Code flow, automatic token refresh on expiry, and token storage. EVE SSO uses standard OAuth2 — the library fits without adaptation. The alternative (manual implementation) is possible but x/oauth2 already handles edge cases and is battle-tested in production.
 
+### testify/mock
+
+Go's standard `testing` package handles test execution and assertions. `testify/mock` adds interface-based mocking — necessary for testing `sync` and `api` in isolation without real ESI or SQLite. The alternative (manual mock structs) works but requires significant boilerplate for every interface. testify/mock generates this automatically and integrates cleanly with the standard `testing` package.
+
 ### React + Vite + TanStack Table
 
 A BPO table with sorting, filters, highlighting, and periodic data refresh is exactly the class of problem TanStack Table was built for. Vanilla JS would require manual implementation of most of TanStack Table's functionality. React provides a component model (BPO table, characters section, summary row are natural components) and state management. Vite removes build complexity: `npm run build` produces static files that embed into the Go binary via `embed` just as easily as vanilla files.
@@ -107,6 +113,7 @@ A BPO table with sorting, filters, highlighting, and periodic data refresh is ex
 - sqlc: https://docs.sqlc.dev (v2)
 - modernc.org/sqlite: https://pkg.go.dev/modernc.org/sqlite
 - golang.org/x/oauth2: https://pkg.go.dev/golang.org/x/oauth2
+- testify/mock: https://github.com/stretchr/testify
 - EVE ESI: https://esi.evetech.net/ui/
 - EVE SSO OAuth2: https://developers.eveonline.com/blog/article/sso-to-authenticated-calls
 - React: https://react.dev (v18+)

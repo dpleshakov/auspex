@@ -106,6 +106,11 @@ Everything else is a subsequent module after MVP.
 
 - The UI responds instantly (data from local SQLite); ESI requests run in the background
 
+**Testability**
+
+- Key packages (`esi`, `sync`, `api`) are designed with dependency injection — dependencies are passed as interfaces, not hardcoded
+- This enables unit testing without a real ESI connection or SQLite database
+
 ---
 
 ## Constraints
