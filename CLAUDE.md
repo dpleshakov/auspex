@@ -12,7 +12,7 @@ Delivered as a **single Go binary** with the React frontend embedded via `go:emb
 
 Development follows a strict phase-by-phase process. Do not skip phases or jump ahead. Each phase has defined inputs and outputs — the output of one phase is the input of the next.
 
-**Current active phase: Phase 5 — Project Structure**
+**Current active phase: Phase 7 — Iterative Development**
 
 ### Phase Overview
 
@@ -22,9 +22,9 @@ Development follows a strict phase-by-phase process. Do not skip phases or jump 
 | 2 | Requirements | `idea.md` | `requirements.md` |
 | 3 | Tech Stack | `requirements.md` | `tech-stack.md` |
 | 4 | Architecture | `requirements.md` + `tech-stack.md` | `architecture.md` |
-| **5** | **Project Structure** ← current | `architecture.md` | File structure + `project-structure.md` |
+| 5 | Project Structure | `architecture.md` | File structure + `project-structure.md` |
 | 6 | Task Breakdown | `requirements.md` + `architecture.md` | `tasks.md` |
-| 7 | Iterative Development | Task + context | Working, committed code |
+| **7** | **Iterative Development** ← current | Task + context | Working, committed code |
 | 8 | Review & Refactor | Completed modules | Improved code + `tech-debt.md` |
 | 9 | Documentation | Finished product | `README.md`, `api-docs.md`, `deployment.md` |
 
@@ -93,7 +93,7 @@ Design the high-level architecture — modules, their responsibilities, and inte
 
 ---
 
-### Phase 5 — Project Structure ← CURRENT
+### Phase 5 — Project Structure
 
 **Input:** `architecture.md`
 
