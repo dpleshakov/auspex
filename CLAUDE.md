@@ -187,29 +187,34 @@ AI helps write the README, API documentation, and startup/deployment instruction
 Once implemented, the standard workflow will be:
 
 ```bash
-# Backend
-make generate        # runs sqlc generate (must be done after any schema/query change)
-make build           # builds the Go binary (also runs generate)
-make run             # runs the binary locally
+# Full build (frontend → sqlc → Go binary)
+scripts/build.sh      # macOS/Linux
+scripts/build.cmd     # Windows
 
-# Frontend (in web/ directory)
+# Frontend only (in cmd/auspex/web/)
 npm install
-npm run dev          # dev server with HMR (proxies API to localhost:8080)
-npm run build        # produces dist/ that gets embedded into the Go binary
+npm run dev           # dev server with HMR, proxies /api and /auth to localhost:8080
+npm run build         # produces dist/ that gets embedded into the Go binary
+
+# Backend only
+sqlc generate         # regenerate internal/store/ after schema or query changes
+go build -o auspex ./cmd/auspex/
+go run ./cmd/auspex/
 
 # Run a specific Go test
 go test ./internal/esi/...
 go test ./internal/sync/... -run TestSyncWorker
 ```
 
-`sqlc generate` must run before `go build` whenever `internal/db/schema.sql` or `internal/db/queries/*.sql` change. The Makefile should enforce this.
+Build order matters: `npm run build` → `sqlc generate` → `go build`. The build scripts enforce this. `sqlc generate` must be re-run after any change to `internal/db/migrations/` or `internal/db/queries/`.
 
 ## Architecture
 
 ### Go Package Layout
 
 ```
-cmd/auspex/          # main entry point — wires everything together
+cmd/auspex/          # main entry point — wires everything together; embeds web/dist
+cmd/auspex/web/      # React frontend (Vite, TanStack Table); lives here so //go:embed works
 internal/
   config/            # CLI flags + config file → typed Config struct
   db/                # SQLite init, schema migrations (up-only), provides *sql.DB
@@ -218,7 +223,6 @@ internal/
   auth/              # EVE SSO OAuth2 flow; wraps esi with auto-refreshing token injection
   sync/              # background worker + scheduler; coordinates auth/esi + store
   api/               # Chi router, HTTP handlers, serves embedded static files
-web/                 # React frontend (Vite, TanStack Table)
 ```
 
 ### Key Architectural Constraints

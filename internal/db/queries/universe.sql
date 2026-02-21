@@ -1,0 +1,2 @@
+-- sqlc queries for eve_types, eve_groups, eve_categories tables.
+-- See https://docs.sqlc.dev for query annotation syntax.

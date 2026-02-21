@@ -1,0 +1,23 @@
+# Binary
+/auspex
+/auspex.exe
+
+# Frontend build output — produced by `npm run build`, embedded at compile time.
+# The directory itself (with .gitkeep) is committed so //go:embed compiles without running npm first.
+cmd/auspex/web/dist/*
+!cmd/auspex/web/dist/.gitkeep
+
+# Frontend dependencies
+cmd/auspex/web/node_modules/
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Config with secrets (copy from auspex.example.yaml and fill in credentials)
+auspex.yaml
+
+# OS
+.DS_Store
+Thumbs.db

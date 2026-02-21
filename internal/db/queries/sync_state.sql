@@ -1,0 +1,2 @@
+-- sqlc queries for the sync_state table.
+-- See https://docs.sqlc.dev for query annotation syntax.
