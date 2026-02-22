@@ -55,6 +55,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-03 `store`
+**Status:** ✅ Done — commit fc63e54
+
 **Description:** Full DB schema in `migrations/001_initial.sql`. sqlc queries for all tables: characters, corporations, blueprints, jobs, sync_state, eve_types, eve_groups, eve_categories. Run `sqlc generate` to produce `internal/store/`.
 
 **Definition of done:**

@@ -7,3 +7,4 @@ sql:
       go:
         package: "store"
         out: "internal/store"
+        emit_interface: true
