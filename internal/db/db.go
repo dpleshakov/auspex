@@ -15,11 +15,20 @@ var migrationsFS embed.FS
 
 // Open opens a SQLite database at path, runs any pending migrations, and
 // returns the connection. Enables WAL journal mode and foreign key enforcement.
+//
+// MaxOpenConns is set to 1 because PRAGMA foreign_keys is a per-connection
+// setting in SQLite: with a pool of connections, new connections would not
+// have FK enforcement. A single connection also avoids concurrent-write
+// contention, which SQLite does not support well.
 func Open(path string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
+
+	// Limit to a single connection so PRAGMAs set below apply to every query.
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
 
 	if err := db.Ping(); err != nil {
 		db.Close()
@@ -86,15 +95,35 @@ func runMigrations(db *sql.DB) error {
 			return fmt.Errorf("reading migration %s: %w", filename, err)
 		}
 
-		if _, err := db.Exec(string(content)); err != nil {
-			return fmt.Errorf("executing migration %s: %w", filename, err)
+		if err := applyMigration(db, filename, string(content)); err != nil {
+			return err
 		}
+	}
 
-		if _, err := db.Exec(
-			"INSERT INTO schema_migrations (filename) VALUES (?)", filename,
-		); err != nil {
-			return fmt.Errorf("recording migration %s: %w", filename, err)
-		}
+	return nil
+}
+
+// applyMigration executes a single migration inside a transaction so that a
+// partially-applied migration cannot leave the schema in an inconsistent state.
+func applyMigration(db *sql.DB, filename, content string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("beginning transaction for migration %s: %w", filename, err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if _, err := tx.Exec(content); err != nil {
+		return fmt.Errorf("executing migration %s: %w", filename, err)
+	}
+
+	if _, err := tx.Exec(
+		"INSERT INTO schema_migrations (filename) VALUES (?)", filename,
+	); err != nil {
+		return fmt.Errorf("recording migration %s: %w", filename, err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("committing migration %s: %w", filename, err)
 	}
 
 	return nil

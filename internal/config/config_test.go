@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
@@ -95,6 +96,38 @@ func TestLoadFromFile_NotFound(t *testing.T) {
 	_, err := loadFromFile("nonexistent.yaml")
 	if err == nil {
 		t.Fatal("expected error for missing file, got nil")
+	}
+}
+
+func TestLoadFromFile_InvalidPort(t *testing.T) {
+	for _, port := range []int{0, -1, 65536, 99999} {
+		f := writeTempConfig(t, fmt.Sprintf(`
+port: %d
+esi:
+  client_id: "myid"
+  client_secret: "mysecret"
+  callback_url: "http://localhost:8080/auth/eve/callback"
+`, port))
+		_, err := loadFromFile(f)
+		if err == nil {
+			t.Errorf("expected error for port %d, got nil", port)
+		}
+	}
+}
+
+func TestLoadFromFile_InvalidRefreshInterval(t *testing.T) {
+	for _, interval := range []int{0, -1, -100} {
+		f := writeTempConfig(t, fmt.Sprintf(`
+refresh_interval: %d
+esi:
+  client_id: "myid"
+  client_secret: "mysecret"
+  callback_url: "http://localhost:8080/auth/eve/callback"
+`, interval))
+		_, err := loadFromFile(f)
+		if err == nil {
+			t.Errorf("expected error for refresh_interval %d, got nil", interval)
+		}
 	}
 }
 

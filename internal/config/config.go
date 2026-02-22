@@ -58,6 +58,12 @@ func defaults() *Config {
 }
 
 func (c *Config) validate() error {
+	if c.Port < 1 || c.Port > 65535 {
+		return fmt.Errorf("port must be between 1 and 65535, got %d", c.Port)
+	}
+	if c.RefreshInterval <= 0 {
+		return fmt.Errorf("refresh_interval must be greater than 0, got %d", c.RefreshInterval)
+	}
 	if c.ESI.ClientID == "" {
 		return fmt.Errorf("esi.client_id is required")
 	}
