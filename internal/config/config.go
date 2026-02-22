@@ -1,8 +1,8 @@
 package config
 
 import (
-	"flag"
 	"fmt"
+	"net/url"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -23,11 +23,10 @@ type ESIConfig struct {
 	CallbackURL  string `yaml:"callback_url"`
 }
 
-// Load reads the config file path from CLI flags and delegates to loadFromFile.
-func Load() (*Config, error) {
-	configPath := flag.String("config", "auspex.yaml", "path to config file")
-	flag.Parse()
-	return loadFromFile(*configPath)
+// Load reads configuration from the file at path and returns a validated Config.
+// The caller is responsible for obtaining path from CLI flags or other sources.
+func Load(path string) (*Config, error) {
+	return loadFromFile(path)
 }
 
 func loadFromFile(path string) (*Config, error) {
@@ -72,6 +71,9 @@ func (c *Config) validate() error {
 	}
 	if c.ESI.CallbackURL == "" {
 		return fmt.Errorf("esi.callback_url is required")
+	}
+	if u, err := url.Parse(c.ESI.CallbackURL); err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return fmt.Errorf("esi.callback_url must be a valid http or https URL, got %q", c.ESI.CallbackURL)
 	}
 	return nil
 }

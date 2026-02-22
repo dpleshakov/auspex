@@ -115,6 +115,21 @@ esi:
 	}
 }
 
+func TestLoadFromFile_InvalidCallbackURL(t *testing.T) {
+	for _, bad := range []string{"not-a-url", "ftp://example.com/cb", ":///bad"} {
+		f := writeTempConfig(t, fmt.Sprintf(`
+esi:
+  client_id: "myid"
+  client_secret: "mysecret"
+  callback_url: %q
+`, bad))
+		_, err := loadFromFile(f)
+		if err == nil {
+			t.Errorf("expected error for callback_url %q, got nil", bad)
+		}
+	}
+}
+
 func TestLoadFromFile_InvalidRefreshInterval(t *testing.T) {
 	for _, interval := range []int{0, -1, -100} {
 		f := writeTempConfig(t, fmt.Sprintf(`
