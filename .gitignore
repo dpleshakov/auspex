@@ -1,6 +1,8 @@
 # Binary
 /auspex
 /auspex.exe
+/smoketest
+/smoketest.exe
 
 # Frontend build output — produced by `npm run build`, embedded at compile time.
 # The directory itself (with .gitkeep) is committed so //go:embed compiles without running npm first.
