@@ -245,6 +245,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-12 `sync` force refresh
+**Status:** ✅ Done — commit 74cb4d9
+
 **Description:** Channel-based signal from `api` to sync worker. When signal received, ignore `cache_until` for all subjects and run full sync immediately.
 
 **Definition of done:**
