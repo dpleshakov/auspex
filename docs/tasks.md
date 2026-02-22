@@ -198,6 +198,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 4 — Sync Worker
 
 ### TASK-09 `sync` worker skeleton
+**Status:** ✅ Done — commit TBD
+
 **Description:** Background goroutine with ticker. On each tick iterates all characters and corporations from store, checks `sync_state.cache_until` per subject per endpoint, skips if cache is still fresh.
 
 **Definition of done:**
