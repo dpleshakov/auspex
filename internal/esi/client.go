@@ -20,6 +20,10 @@ const (
 
 	// maxRetries is the maximum number of retry attempts after the initial request.
 	maxRetries = 3
+
+	// maxRetryAfterDelay caps the Retry-After sleep to prevent the client from
+	// blocking indefinitely on a misbehaving or adversarial ESI response.
+	maxRetryAfterDelay = 60 * time.Second
 )
 
 // Client is the interface used by the sync and auth packages.
@@ -87,6 +91,9 @@ func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Ti
 				return nil, cacheUntil, fmt.Errorf("ESI 429 after %d retries", maxRetries)
 			}
 			c.sleep(parseRetryAfter(resp.Header.Get("Retry-After")))
+			if ctx.Err() != nil {
+				return nil, time.Time{}, ctx.Err()
+			}
 
 		case resp.StatusCode >= 500:
 			if attempt == maxRetries {
@@ -94,6 +101,9 @@ func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Ti
 			}
 			// Exponential backoff: 1s, 2s, 4s for attempts 0, 1, 2.
 			c.sleep(time.Duration(1<<uint(attempt)) * time.Second)
+			if ctx.Err() != nil {
+				return nil, time.Time{}, ctx.Err()
+			}
 
 		case resp.StatusCode >= 400:
 			return nil, cacheUntil, fmt.Errorf("ESI status %d: %s", resp.StatusCode, body)
@@ -131,5 +141,9 @@ func parseRetryAfter(s string) time.Duration {
 	if err != nil || secs < 0 {
 		return time.Second
 	}
-	return time.Duration(secs) * time.Second
+	d := time.Duration(secs) * time.Second
+	if d > maxRetryAfterDelay {
+		return maxRetryAfterDelay
+	}
+	return d
 }

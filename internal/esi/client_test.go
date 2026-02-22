@@ -2,6 +2,7 @@ package esi
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -73,6 +74,14 @@ func TestParseRetryAfter_Malformed(t *testing.T) {
 func TestParseRetryAfter_Negative(t *testing.T) {
 	if got := parseRetryAfter("-5"); got != time.Second {
 		t.Errorf("got %v, want 1s fallback", got)
+	}
+}
+
+func TestParseRetryAfter_LargeValue(t *testing.T) {
+	// A server returning Retry-After: 3600 must not block the client for an hour.
+	got := parseRetryAfter("3600")
+	if got != maxRetryAfterDelay {
+		t.Errorf("got %v, want cap of %v", got, maxRetryAfterDelay)
 	}
 }
 
@@ -247,6 +256,29 @@ func TestDo_Retry5xx_ExhaustedReturnsError(t *testing.T) {
 	}
 	if got := calls.Load(); got != maxRetries+1 {
 		t.Errorf("expected %d calls, got %d", maxRetries+1, got)
+	}
+}
+
+// --- do: context cancellation during sleep ---
+
+func TestDo_ContextCancelledDuringSleep(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "60")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c := NewClient(srv.Client())
+	c.baseURL = srv.URL
+	c.sleep = func(_ time.Duration) {
+		cancel() // simulate context cancelled mid-sleep
+	}
+
+	_, _, err := c.do(ctx, srv.URL, "")
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
 	}
 }
 
