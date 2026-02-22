@@ -12,9 +12,10 @@ import (
 // noopSleep replaces time.Sleep so retry tests complete instantly.
 func noopSleep(_ time.Duration) {}
 
-// newTestClient builds a Client pointed at srv with retries disabled for time.
-func newTestClient(srv *httptest.Server) *Client {
+// newTestClient builds an httpClient pointed at srv with retries disabled for time.
+func newTestClient(srv *httptest.Server) *httpClient {
 	c := NewClient(srv.Client())
+	c.baseURL = srv.URL
 	c.sleep = noopSleep
 	return c
 }

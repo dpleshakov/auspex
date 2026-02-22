@@ -22,19 +22,34 @@ const (
 	maxRetries = 3
 )
 
-// Client is the base ESI HTTP client. It handles Authorization headers,
-// Expires header parsing, and retry logic for 429 and 5xx responses.
-type Client struct {
-	http  *http.Client
-	sleep func(time.Duration) // injectable for testing; defaults to time.Sleep
+// Client is the interface used by the sync and auth packages.
+// It allows substituting a mock ESI client in tests without a real network.
+//
+// Note: GetUniverseType is implemented in TASK-06 (universe.go).
+// The compile-time assertion var _ Client = (*httpClient)(nil) is added there.
+type Client interface {
+	GetCharacterBlueprints(ctx context.Context, characterID int64, token string) ([]Blueprint, time.Time, error)
+	GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)
+	GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
+	GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
+	GetUniverseType(ctx context.Context, typeID int64) (UniverseType, error)
 }
 
-// NewClient constructs a Client using the provided *http.Client.
+// httpClient is the concrete implementation of Client.
+type httpClient struct {
+	http    *http.Client
+	sleep   func(time.Duration) // injectable for testing; defaults to time.Sleep
+	baseURL string              // defaults to BaseURL; overridden in tests
+}
+
+// NewClient constructs an httpClient using the provided *http.Client.
+// The returned *httpClient satisfies the Client interface once all methods are implemented.
 // Passing a custom *http.Client (e.g. from httptest.NewServer) enables unit testing.
-func NewClient(httpClient *http.Client) *Client {
-	return &Client{
-		http:  httpClient,
-		sleep: time.Sleep,
+func NewClient(h *http.Client) *httpClient {
+	return &httpClient{
+		http:    h,
+		sleep:   time.Sleep,
+		baseURL: BaseURL,
 	}
 }
 
@@ -42,7 +57,7 @@ func NewClient(httpClient *http.Client) *Client {
 // It retries on 429 (honouring Retry-After) and 5xx (exponential backoff),
 // up to maxRetries times. Returns the raw response body and the parsed Expires header.
 // A 4xx response other than 429 is returned as an error without retrying.
-func (c *Client) do(ctx context.Context, url, token string) ([]byte, time.Time, error) {
+func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Time, error) {
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
