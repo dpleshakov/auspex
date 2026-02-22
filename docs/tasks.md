@@ -89,7 +89,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-05 `esi` blueprints + jobs
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit e13ed37
 
 **Description:** ESI endpoints for blueprints and industry jobs. Character and corporation variants.
 
