@@ -131,6 +131,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 3 — Auth
 
 ### TASK-07 `auth` OAuth flow
+**Status:** ✅ Done — commit 7ae5bd3
+
 **Description:** EVE SSO OAuth2 Authorization Code flow. Generate authorization URL with state parameter, exchange code for tokens, verify character via `/verify`, save tokens to store.
 
 **Definition of done:**
