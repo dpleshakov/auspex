@@ -73,6 +73,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 2 — ESI HTTP Client
 
 ### TASK-04 `esi` base client
+**Status:** ✅ Done — commit 3907a42
+
 **Description:** Base HTTP client struct. Executes requests with Authorization header, parses `Expires` response header into `time.Time`, implements retry logic on 429 (respect `Retry-After`) and 5xx (exponential backoff, max 3 retries).
 
 **Definition of done:**
