@@ -278,7 +278,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-14 `api` characters + corporations
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit c54451c
 
 **Description:** HTTP handlers for character and corporation management.
 
