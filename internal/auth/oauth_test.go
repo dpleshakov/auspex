@@ -186,6 +186,24 @@ func TestCallVerify_NonOKStatus(t *testing.T) {
 	}
 }
 
+// TestCallVerify_ZeroCharacterID verifies that a response with CharacterID == 0
+// is rejected as invalid.
+func TestCallVerify_ZeroCharacterID(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(verifyResponse{CharacterID: 0, CharacterName: ""})
+	}))
+	defer ts.Close()
+
+	p := newTestProvider(t, ts.Client(), nil)
+	p.verifyURL = ts.URL
+
+	_, err := p.callVerify(context.Background(), "some-token")
+	if err == nil {
+		t.Fatal("expected error for zero CharacterID, got nil")
+	}
+}
+
 // TestHandleCallback_ValidFlow exercises the full happy path:
 // valid state → token exchange → /verify → UpsertCharacter.
 func TestHandleCallback_ValidFlow(t *testing.T) {

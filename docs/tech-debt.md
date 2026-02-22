@@ -80,3 +80,64 @@ SQLite setup with proper connection-level PRAGMA hooks).
 **Not a problem for MVP.**
 
 ---
+
+## Layer 3 Review — Auth (oauth.go, client.go)
+
+### TD-06 `callVerify`: status check after `io.ReadAll` — ✅ Fixed
+
+**File:** `internal/auth/oauth.go`
+
+The original code called `io.ReadAll(resp.Body)` before checking
+`resp.StatusCode`. A misbehaving server returning a large error body would
+exhaust memory before the status check could reject it. Additionally, the
+raw error body was interpolated into the error message, which could expose
+sensitive content in logs.
+
+**Fix:** Status check moved before `io.ReadAll`. Error message for non-200
+responses no longer includes the response body (only the status code).
+Test `TestCallVerify_NonOKStatus` continues to pass unchanged.
+
+---
+
+### TD-07 `Provider.states` map grows without bound — ⏭ Won't fix (MVP)
+
+**File:** `internal/auth/oauth.go`
+
+Every call to `GenerateAuthURL()` adds an entry to `p.states`. Abandoned
+OAuth sessions (user opens login URL but never completes the flow) are never
+evicted. For a local desktop tool with one user and infrequent logins this
+is inconsequential. Fix if needed: add a TTL-based eviction (store
+`time.Time` alongside the state and sweep entries older than N minutes in
+a background goroutine).
+
+**Not a problem for MVP.**
+
+---
+
+### TD-08 `callVerify` did not validate `CharacterID > 0` — ✅ Fixed
+
+**File:** `internal/auth/oauth.go`
+
+A malformed or empty response from EVE SSO (e.g. `{"CharacterID": 0}`)
+would be stored silently, corrupting the `characters` table with an invalid
+ID=0 row.
+
+**Fix:** Added validation `v.CharacterID <= 0 → error` after JSON parsing.
+Test `TestCallVerify_ZeroCharacterID` added.
+
+---
+
+### TD-09 `tokenForCharacter` issues a store read on every ESI call — ⏭ Won't fix (MVP)
+
+**File:** `internal/auth/client.go`
+
+Each ESI call (blueprints, jobs) triggers a `store.GetCharacter` round-trip
+to SQLite to retrieve the current token. A single sync cycle for one
+character makes 2 such reads (blueprints + jobs), and for a corporation 4
+reads (2 character queries + 2 corporation→delegate queries). With SQLite
+on a local disk this is fast, but at scale (many characters, frequent
+syncs) it adds up.
+
+**Not a problem for MVP.** Fix if needed: cache the token in memory with
+a short TTL (shorter than the access token lifetime) to avoid repeated
+store reads within a single sync cycle.

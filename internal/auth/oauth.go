@@ -147,18 +147,22 @@ func (p *Provider) callVerify(ctx context.Context, accessToken string) (verifyRe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return verifyResponse{}, fmt.Errorf("verify returned HTTP %d", resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return verifyResponse{}, fmt.Errorf("reading verify response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return verifyResponse{}, fmt.Errorf("verify returned HTTP %d: %s", resp.StatusCode, body)
-	}
-
 	var v verifyResponse
 	if err := json.Unmarshal(body, &v); err != nil {
 		return verifyResponse{}, fmt.Errorf("parsing verify response: %w", err)
+	}
+
+	if v.CharacterID <= 0 {
+		return verifyResponse{}, fmt.Errorf("verify returned invalid CharacterID %d", v.CharacterID)
 	}
 
 	return v, nil
