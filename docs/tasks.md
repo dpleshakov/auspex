@@ -25,6 +25,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 1 — Foundation
 
 ### TASK-01 `config`
+**Status:** ✅ Done — commit c9b1725
+
 **Description:** `Config` struct and loader. Sources: CLI flags and `auspex.yaml`. Fields: port, db_path, refresh_interval, ESI client_id, client_secret, callback_url. Validation of required fields at startup.
 
 **Definition of done:**
