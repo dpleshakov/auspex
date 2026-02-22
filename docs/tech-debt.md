@@ -141,3 +141,66 @@ syncs) it adds up.
 **Not a problem for MVP.** Fix if needed: cache the token in memory with
 a short TTL (shorter than the access token lifetime) to avoid repeated
 store reads within a single sync cycle.
+
+---
+
+## Layer 4 Review — Sync Worker (worker.go)
+
+### TD-10 `syncBlueprints` does not prune stale rows — ⏭ Won't fix (MVP)
+
+**File:** `internal/sync/worker.go`
+
+`syncBlueprints` only upserts incoming blueprints; it never removes rows
+for blueprints that have left the owner's ESI response (sold, destroyed,
+moved to an untracked owner). By contrast, `syncJobs` explicitly compares
+incoming job IDs against stored IDs and deletes the difference.
+
+Because `UpsertBlueprint` uses `ON CONFLICT(id) DO UPDATE SET owner_*`,
+a blueprint transferred to another *tracked* owner is updated correctly —
+the problem only arises when the item moves to an untracked owner or is
+destroyed. In those cases the row remains indefinitely with the original
+owner and shows as "Idle" on the dashboard.
+
+**Not a problem for MVP** — blueprint transfers are uncommon, and the item
+is at most displayed as a phantom "Idle" entry. Fix when needed: mirror the
+`syncJobs` approach — collect the set of incoming `item_id`s, compare
+against `ListBlueprintTypeIDsByOwner` (or a dedicated
+`ListBlueprintIDsByOwner`), and delete the difference.
+
+---
+
+### TD-11 `resolveTypeIDs` makes N sequential ESI calls — ⏭ Won't fix (MVP)
+
+**File:** `internal/sync/worker.go`
+
+For each unknown `type_id`, `resolveTypeIDs` calls `esi.GetUniverseType`
+synchronously. The sync worker is single-threaded per cycle, so on a
+character's first sync with 200 unique BPO types, the worker is blocked for
+200 sequential network round-trips before it can move on to the next subject.
+
+ESI offers `POST /universe/names/` for bulk resolution (up to 1000 IDs per
+request), but it was not implemented in TASK-06. During the initial sync of
+a large corp library this can take tens of seconds to a few minutes.
+
+**Not a problem for MVP** — personal characters and small/medium corps have
+far fewer unique BPO types, and the delay is one-time. Fix before supporting
+large fleet-scale corporations: collect all unknown `type_id`s across all
+owners, batch them into `POST /universe/names/` requests, then upsert
+results. Alternatively, resolve concurrently with a bounded goroutine pool.
+
+---
+
+### TD-12 Blueprints with unresolved `type_id` silently excluded from dashboard — ⏭ Won't fix (MVP)
+
+**File:** `internal/db/queries/blueprints.sql`
+
+`ListBlueprints` uses `JOIN eve_types t ON t.id = b.type_id`. If
+`resolveTypeIDs` fails or is interrupted for a particular `type_id`
+(e.g. ESI 404, DB error, context cancellation), no row exists in
+`eve_types` for that ID. The blueprint is silently excluded from all
+query results with no error or warning.
+
+**Not a problem for MVP** — `resolveTypeIDs` errors are already logged,
+and the retry on the next tick will usually succeed. Fix if needed: change
+to `LEFT JOIN eve_types` and use `COALESCE(t.name, 'Unknown Type ' || b.type_id)`
+as the fallback name so the blueprint always appears on the dashboard.
