@@ -262,6 +262,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 5 — API
 
 ### TASK-13 `api` router + middleware
+**Status:** ✅ Done — commit TBD
+
 **Description:** Chi router assembly. Middleware stack for all routes: Logger, Recoverer. Additional middleware for `/api` group: `Content-Type: application/json`, CORS. Static file serving via `embed.FS` for non-API routes with SPA fallback to `index.html`.
 
 **Definition of done:**
