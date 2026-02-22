@@ -14,6 +14,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -151,7 +152,138 @@ func (w *Worker) isFresh(ctx context.Context, ownerType string, ownerID int64, e
 }
 
 // syncSubject fetches and stores ESI data for one (ownerType, ownerID, endpoint) tuple.
-// TASK-10 implements the full body; this stub exists so the package compiles in TASK-09.
-func (w *Worker) syncSubject(_ context.Context, _ string, _ int64, _ string) {
-	// Implemented in TASK-10.
+// On ESI or store error the error is logged and sync_state is NOT updated,
+// so the next tick will retry the subject.
+func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int64, endpoint string) {
+	var cacheUntil time.Time
+	var err error
+
+	switch endpoint {
+	case endpointBlueprints:
+		cacheUntil, err = w.syncBlueprints(ctx, ownerType, ownerID)
+	case endpointJobs:
+		cacheUntil, err = w.syncJobs(ctx, ownerType, ownerID)
+	default:
+		log.Printf("sync: unknown endpoint %q for %s %d", endpoint, ownerType, ownerID)
+		return
+	}
+
+	if err != nil {
+		log.Printf("sync: %s %s %d: %v", endpoint, ownerType, ownerID, err)
+		return
+	}
+
+	if err := w.store.UpsertSyncState(ctx, store.UpsertSyncStateParams{
+		OwnerType:  ownerType,
+		OwnerID:    ownerID,
+		Endpoint:   endpoint,
+		LastSync:   w.now(),
+		CacheUntil: cacheUntil,
+	}); err != nil {
+		log.Printf("sync: updating sync_state for %s %d %s: %v", ownerType, ownerID, endpoint, err)
+	}
+}
+
+// syncBlueprints fetches blueprints from ESI and upserts them into the store.
+// Returns the ESI cache expiry time on success.
+func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID int64) (time.Time, error) {
+	var bps []esi.Blueprint
+	var cacheUntil time.Time
+	var err error
+
+	switch ownerType {
+	case ownerTypeCharacter:
+		bps, cacheUntil, err = w.esi.GetCharacterBlueprints(ctx, ownerID, "")
+	case ownerTypeCorporation:
+		bps, cacheUntil, err = w.esi.GetCorporationBlueprints(ctx, ownerID, "")
+	default:
+		return time.Time{}, fmt.Errorf("unknown owner type %q", ownerType)
+	}
+	if err != nil {
+		return cacheUntil, fmt.Errorf("fetching blueprints: %w", err)
+	}
+
+	now := w.now()
+	for _, bp := range bps {
+		if err := w.store.UpsertBlueprint(ctx, store.UpsertBlueprintParams{
+			ID:         bp.ItemID,
+			OwnerType:  ownerType,
+			OwnerID:    ownerID,
+			TypeID:     bp.TypeID,
+			LocationID: bp.LocationID,
+			MeLevel:    bp.MELevel,
+			TeLevel:    bp.TELevel,
+			UpdatedAt:  now,
+		}); err != nil {
+			return cacheUntil, fmt.Errorf("upserting blueprint %d: %w", bp.ItemID, err)
+		}
+	}
+
+	return cacheUntil, nil
+}
+
+// syncJobs fetches active/ready jobs from ESI, upserts them into the store,
+// and deletes any jobs that were previously stored but are no longer in the ESI response.
+// Returns the ESI cache expiry time on success.
+func (w *Worker) syncJobs(ctx context.Context, ownerType string, ownerID int64) (time.Time, error) {
+	var jobs []esi.Job
+	var cacheUntil time.Time
+	var err error
+
+	switch ownerType {
+	case ownerTypeCharacter:
+		jobs, cacheUntil, err = w.esi.GetCharacterJobs(ctx, ownerID, "")
+	case ownerTypeCorporation:
+		jobs, cacheUntil, err = w.esi.GetCorporationJobs(ctx, ownerID, "")
+	default:
+		return time.Time{}, fmt.Errorf("unknown owner type %q", ownerType)
+	}
+	if err != nil {
+		return cacheUntil, fmt.Errorf("fetching jobs: %w", err)
+	}
+
+	// Build set of job IDs returned by ESI.
+	incoming := make(map[int64]bool, len(jobs))
+	for _, j := range jobs {
+		incoming[j.JobID] = true
+	}
+
+	// Get job IDs currently in the store for this owner so we can prune stale ones.
+	existing, err := w.store.ListJobIDsByOwner(ctx, store.ListJobIDsByOwnerParams{
+		OwnerType: ownerType,
+		OwnerID:   ownerID,
+	})
+	if err != nil {
+		return cacheUntil, fmt.Errorf("listing existing jobs: %w", err)
+	}
+
+	// Upsert all incoming jobs.
+	now := w.now()
+	for _, j := range jobs {
+		if err := w.store.UpsertJob(ctx, store.UpsertJobParams{
+			ID:          j.JobID,
+			BlueprintID: j.BlueprintID,
+			OwnerType:   ownerType,
+			OwnerID:     ownerID,
+			InstallerID: j.InstallerID,
+			Activity:    j.Activity,
+			Status:      j.Status,
+			StartDate:   j.StartDate,
+			EndDate:     j.EndDate,
+			UpdatedAt:   now,
+		}); err != nil {
+			return cacheUntil, fmt.Errorf("upserting job %d: %w", j.JobID, err)
+		}
+	}
+
+	// Delete stale jobs (in store but no longer in ESI response).
+	for _, id := range existing {
+		if !incoming[id] {
+			if err := w.store.DeleteJobByID(ctx, id); err != nil {
+				return cacheUntil, fmt.Errorf("deleting stale job %d: %w", id, err)
+			}
+		}
+	}
+
+	return cacheUntil, nil
 }

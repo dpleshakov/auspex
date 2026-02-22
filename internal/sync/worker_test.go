@@ -11,13 +11,21 @@ import (
 )
 
 // mockQuerier implements store.Querier for worker unit tests.
-// The three methods used by Worker (ListCharacters, ListCorporations, GetSyncState)
-// are wired through function fields so each test can control their behaviour.
-// All other methods panic — an unexpected call indicates a test bug.
+// Methods exercised by the worker are wired through function fields so each
+// test can control their behaviour. Unset fields panic — an unexpected call
+// indicates a test bug.
 type mockQuerier struct {
+	// TASK-09: scheduling loop
 	listCharsFunc func() ([]store.Character, error)
 	listCorpsFunc func() ([]store.ListCorporationsRow, error)
 	getSyncFunc   func(store.GetSyncStateParams) (store.SyncState, error)
+
+	// TASK-10: syncSubject
+	upsertBlueprintFunc   func(store.UpsertBlueprintParams) error
+	upsertJobFunc         func(store.UpsertJobParams) error
+	listJobIDsByOwnerFunc func(store.ListJobIDsByOwnerParams) ([]int64, error)
+	deleteJobByIDFunc     func(int64) error
+	upsertSyncStateFunc   func(store.UpsertSyncStateParams) error
 }
 
 func (m *mockQuerier) ListCharacters(_ context.Context) ([]store.Character, error) {
@@ -60,7 +68,10 @@ func (m *mockQuerier) DeleteCharacter(_ context.Context, _ int64) error {
 func (m *mockQuerier) DeleteCorporation(_ context.Context, _ int64) error {
 	panic("unexpected call to DeleteCorporation")
 }
-func (m *mockQuerier) DeleteJobByID(_ context.Context, _ int64) error {
+func (m *mockQuerier) DeleteJobByID(_ context.Context, id int64) error {
+	if m.deleteJobByIDFunc != nil {
+		return m.deleteJobByIDFunc(id)
+	}
 	panic("unexpected call to DeleteJobByID")
 }
 func (m *mockQuerier) DeleteJobsByOwner(_ context.Context, _ store.DeleteJobsByOwnerParams) error {
@@ -99,22 +110,34 @@ func (m *mockQuerier) ListBlueprints(_ context.Context, _ store.ListBlueprintsPa
 func (m *mockQuerier) ListCharacterSlotUsage(_ context.Context) ([]store.ListCharacterSlotUsageRow, error) {
 	panic("unexpected call to ListCharacterSlotUsage")
 }
-func (m *mockQuerier) ListJobIDsByOwner(_ context.Context, _ store.ListJobIDsByOwnerParams) ([]int64, error) {
+func (m *mockQuerier) ListJobIDsByOwner(_ context.Context, arg store.ListJobIDsByOwnerParams) ([]int64, error) {
+	if m.listJobIDsByOwnerFunc != nil {
+		return m.listJobIDsByOwnerFunc(arg)
+	}
 	panic("unexpected call to ListJobIDsByOwner")
 }
 func (m *mockQuerier) ListSyncStatus(_ context.Context) ([]store.ListSyncStatusRow, error) {
 	panic("unexpected call to ListSyncStatus")
 }
-func (m *mockQuerier) UpsertBlueprint(_ context.Context, _ store.UpsertBlueprintParams) error {
+func (m *mockQuerier) UpsertBlueprint(_ context.Context, arg store.UpsertBlueprintParams) error {
+	if m.upsertBlueprintFunc != nil {
+		return m.upsertBlueprintFunc(arg)
+	}
 	panic("unexpected call to UpsertBlueprint")
 }
 func (m *mockQuerier) UpsertCharacter(_ context.Context, _ store.UpsertCharacterParams) error {
 	panic("unexpected call to UpsertCharacter")
 }
-func (m *mockQuerier) UpsertJob(_ context.Context, _ store.UpsertJobParams) error {
+func (m *mockQuerier) UpsertJob(_ context.Context, arg store.UpsertJobParams) error {
+	if m.upsertJobFunc != nil {
+		return m.upsertJobFunc(arg)
+	}
 	panic("unexpected call to UpsertJob")
 }
-func (m *mockQuerier) UpsertSyncState(_ context.Context, _ store.UpsertSyncStateParams) error {
+func (m *mockQuerier) UpsertSyncState(_ context.Context, arg store.UpsertSyncStateParams) error {
+	if m.upsertSyncStateFunc != nil {
+		return m.upsertSyncStateFunc(arg)
+	}
 	panic("unexpected call to UpsertSyncState")
 }
 
