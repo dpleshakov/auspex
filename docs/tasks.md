@@ -146,6 +146,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-08 `auth` token refresh
+**Status:** ✅ Done — commit 1877334
+
 **Description:** Automatic token refresh when access token is expired. `auth.Client` wraps `esi.Client` and injects a fresh token before every request. Implements `auth.TokenRefresher` interface.
 
 **Definition of done:**
