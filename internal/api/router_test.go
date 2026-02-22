@@ -91,7 +91,7 @@ func TestPanicRecovery(t *testing.T) {
 // --- Assembled router: Content-Type on /api routes ---
 
 func TestRouter_APIContentType(t *testing.T) {
-	mux := NewRouter(nil, nil, nil, testFS())
+	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
 	req := httptest.NewRequest(http.MethodGet, "/api/characters", nil)
 	rr := httptest.NewRecorder()
