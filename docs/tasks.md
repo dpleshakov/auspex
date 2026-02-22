@@ -229,7 +229,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-11 `sync` lazy type resolution
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 068a7dc
 
 **Description:** After each successful sync, collect all `type_id`s from new blueprints. For each `type_id` not present in `eve_types`, fetch from ESI and insert into `eve_types`, `eve_groups`, `eve_categories`.
 
