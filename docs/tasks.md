@@ -40,7 +40,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-02 `db`
-**Status:** ✅ Done — commit pending
+**Status:** ✅ Done — commit e89b1d7
 
 **Description:** SQLite connection initialization using `modernc.org/sqlite`. Runs migration files in order at startup. Returns `*sql.DB`.
 
