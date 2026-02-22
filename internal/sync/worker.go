@@ -161,6 +161,9 @@ func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int6
 	switch endpoint {
 	case endpointBlueprints:
 		cacheUntil, err = w.syncBlueprints(ctx, ownerType, ownerID)
+		if err == nil {
+			w.resolveTypeIDs(ctx, ownerType, ownerID)
+		}
 	case endpointJobs:
 		cacheUntil, err = w.syncJobs(ctx, ownerType, ownerID)
 	default:
@@ -220,6 +223,64 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 	}
 
 	return cacheUntil, nil
+}
+
+// resolveTypeIDs ensures that every blueprint type_id for the given owner has
+// a corresponding row in eve_types, eve_groups, and eve_categories.
+// Unknown type_ids (absent from eve_types) are fetched from ESI and inserted
+// in FK order: category → group → type. Known type_ids are skipped.
+// Errors per type_id are logged and skipped; they are non-fatal so that a
+// single bad type_id does not block resolution of the rest.
+func (w *Worker) resolveTypeIDs(ctx context.Context, ownerType string, ownerID int64) {
+	typeIDs, err := w.store.ListBlueprintTypeIDsByOwner(ctx, store.ListBlueprintTypeIDsByOwnerParams{
+		OwnerType: ownerType,
+		OwnerID:   ownerID,
+	})
+	if err != nil {
+		log.Printf("sync: listing blueprint type_ids for %s %d: %v", ownerType, ownerID, err)
+		return
+	}
+
+	for _, typeID := range typeIDs {
+		if ctx.Err() != nil {
+			return
+		}
+
+		// Skip if already in eve_types — no ESI call needed.
+		if _, err := w.store.GetEveType(ctx, typeID); err == nil {
+			continue
+		}
+
+		ut, err := w.esi.GetUniverseType(ctx, typeID)
+		if err != nil {
+			log.Printf("sync: fetching universe type %d: %v", typeID, err)
+			continue
+		}
+
+		// Insert in FK order: category → group → type.
+		if err := w.store.InsertEveCategory(ctx, store.InsertEveCategoryParams{
+			ID:   ut.CategoryID,
+			Name: ut.CategoryName,
+		}); err != nil {
+			log.Printf("sync: inserting eve_category %d: %v", ut.CategoryID, err)
+			continue
+		}
+		if err := w.store.InsertEveGroup(ctx, store.InsertEveGroupParams{
+			ID:         ut.GroupID,
+			CategoryID: ut.CategoryID,
+			Name:       ut.GroupName,
+		}); err != nil {
+			log.Printf("sync: inserting eve_group %d: %v", ut.GroupID, err)
+			continue
+		}
+		if err := w.store.InsertEveType(ctx, store.InsertEveTypeParams{
+			ID:      typeID,
+			GroupID: ut.GroupID,
+			Name:    ut.TypeName,
+		}); err != nil {
+			log.Printf("sync: inserting eve_type %d: %v", typeID, err)
+		}
+	}
 }
 
 // syncJobs fetches active/ready jobs from ESI, upserts them into the store,

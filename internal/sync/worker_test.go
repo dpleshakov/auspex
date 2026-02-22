@@ -26,6 +26,13 @@ type mockQuerier struct {
 	listJobIDsByOwnerFunc func(store.ListJobIDsByOwnerParams) ([]int64, error)
 	deleteJobByIDFunc     func(int64) error
 	upsertSyncStateFunc   func(store.UpsertSyncStateParams) error
+
+	// TASK-11: type resolution
+	listBlueprintTypeIDsByOwnerFunc func(store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error)
+	getEveTypeFunc                  func(int64) (store.EveType, error)
+	insertEveCategoryFunc           func(store.InsertEveCategoryParams) error
+	insertEveGroupFunc              func(store.InsertEveGroupParams) error
+	insertEveTypeFunc               func(store.InsertEveTypeParams) error
 }
 
 func (m *mockQuerier) ListCharacters(_ context.Context) ([]store.Character, error) {
@@ -86,23 +93,39 @@ func (m *mockQuerier) GetCharacter(_ context.Context, _ int64) (store.Character,
 func (m *mockQuerier) GetCorporation(_ context.Context, _ int64) (store.Corporation, error) {
 	panic("unexpected call to GetCorporation")
 }
-func (m *mockQuerier) GetEveType(_ context.Context, _ int64) (store.EveType, error) {
+func (m *mockQuerier) GetEveType(_ context.Context, id int64) (store.EveType, error) {
+	if m.getEveTypeFunc != nil {
+		return m.getEveTypeFunc(id)
+	}
 	panic("unexpected call to GetEveType")
 }
 func (m *mockQuerier) InsertCorporation(_ context.Context, _ store.InsertCorporationParams) error {
 	panic("unexpected call to InsertCorporation")
 }
-func (m *mockQuerier) InsertEveCategory(_ context.Context, _ store.InsertEveCategoryParams) error {
+func (m *mockQuerier) InsertEveCategory(_ context.Context, arg store.InsertEveCategoryParams) error {
+	if m.insertEveCategoryFunc != nil {
+		return m.insertEveCategoryFunc(arg)
+	}
 	panic("unexpected call to InsertEveCategory")
 }
-func (m *mockQuerier) InsertEveGroup(_ context.Context, _ store.InsertEveGroupParams) error {
+func (m *mockQuerier) InsertEveGroup(_ context.Context, arg store.InsertEveGroupParams) error {
+	if m.insertEveGroupFunc != nil {
+		return m.insertEveGroupFunc(arg)
+	}
 	panic("unexpected call to InsertEveGroup")
 }
-func (m *mockQuerier) InsertEveType(_ context.Context, _ store.InsertEveTypeParams) error {
+func (m *mockQuerier) InsertEveType(_ context.Context, arg store.InsertEveTypeParams) error {
+	if m.insertEveTypeFunc != nil {
+		return m.insertEveTypeFunc(arg)
+	}
 	panic("unexpected call to InsertEveType")
 }
-func (m *mockQuerier) ListBlueprintTypeIDsByOwner(_ context.Context, _ store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error) {
-	panic("unexpected call to ListBlueprintTypeIDsByOwner")
+func (m *mockQuerier) ListBlueprintTypeIDsByOwner(_ context.Context, arg store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error) {
+	if m.listBlueprintTypeIDsByOwnerFunc != nil {
+		return m.listBlueprintTypeIDsByOwnerFunc(arg)
+	}
+	// Default: empty list — resolveTypeIDs becomes a no-op, existing tests unaffected.
+	return nil, nil
 }
 func (m *mockQuerier) ListBlueprints(_ context.Context, _ store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 	panic("unexpected call to ListBlueprints")

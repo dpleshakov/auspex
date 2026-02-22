@@ -13,10 +13,11 @@ import (
 // mockESIClient implements esi.Client for syncSubject tests.
 // Methods not relevant to a specific test panic if called.
 type mockESIClient struct {
-	charBlueprintsFunc func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	corpBlueprintsFunc func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	charJobsFunc       func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	corpJobsFunc       func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	charBlueprintsFunc  func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	corpBlueprintsFunc  func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	charJobsFunc        func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	corpJobsFunc        func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	getUniverseTypeFunc func(context.Context, int64) (esi.UniverseType, error)
 }
 
 func (m *mockESIClient) GetCharacterBlueprints(ctx context.Context, id int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -47,7 +48,10 @@ func (m *mockESIClient) GetCorporationJobs(ctx context.Context, id int64, token 
 	panic("unexpected call to GetCorporationJobs")
 }
 
-func (m *mockESIClient) GetUniverseType(_ context.Context, _ int64) (esi.UniverseType, error) {
+func (m *mockESIClient) GetUniverseType(ctx context.Context, typeID int64) (esi.UniverseType, error) {
+	if m.getUniverseTypeFunc != nil {
+		return m.getUniverseTypeFunc(ctx, typeID)
+	}
 	panic("unexpected call to GetUniverseType")
 }
 
