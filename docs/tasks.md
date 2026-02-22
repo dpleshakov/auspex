@@ -214,7 +214,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-10 `sync` full sync cycle
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit f367d4a
 
 **Description:** Full sync for one subject: fetch blueprints and jobs from ESI, upsert to store, update sync_state with `cache_until` from ESI `Expires` header.
 
