@@ -55,7 +55,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-03 `store`
-**Status:** ✅ Done — commit fc63e54
+**Status:** ✅ Done — commit c64fc94
 
 **Description:** Full DB schema in `migrations/001_initial.sql`. sqlc queries for all tables: characters, corporations, blueprints, jobs, sync_state, eve_types, eve_groups, eve_categories. Run `sqlc generate` to produce `internal/store/`.
 
@@ -73,7 +73,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 2 — ESI HTTP Client
 
 ### TASK-04 `esi` base client
-**Status:** ✅ Done — commit 3907a42
+**Status:** ✅ Done — commit 2ff10f9
 
 **Description:** Base HTTP client struct. Executes requests with Authorization header, parses `Expires` response header into `time.Time`, implements retry logic on 429 (respect `Retry-After`) and 5xx (exponential backoff, max 3 retries).
 
