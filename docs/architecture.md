@@ -463,3 +463,17 @@ Frontend polls GET /api/sync/status every 2s
 **Lazy EVE universe data resolution.** The `eve_types`, `eve_groups`, `eve_categories` tables are populated on first encounter with a new `type_id` and never updated again — this data is stable.
 
 **Separation of business logic and UI.** The backend is a clean REST API. The frontend is static files. Replacing the UI (Wails, native) does not touch the backend.
+
+---
+
+## Security Decisions
+
+**Trust boundary.** The only external system that receives user data is the EVE ESI API — OAuth2 tokens are sent there and nowhere else. Everything else (SQLite, config file) stays local on the user's machine.
+
+**Tokens never enter logs.** Chi Logger records method, URL, HTTP status, and response time. OAuth2 tokens travel in the `Authorization` header and never appear in URLs, so they are safe from accidental logging. Error responses from handlers must not include token values — errors are logged server-side only.
+
+**Input validation at the API boundary.** All user-supplied values arriving via HTTP — `corporation_id`, `delegate_id`, query parameters — are validated in `api` handlers before being passed to `store`. The `esi` package validates ESI responses before returning them to `sync`.
+
+**OAuth2 state parameter.** The `auth` package generates a random `state` value for each login flow and validates it on callback. This prevents CSRF attacks on the OAuth2 flow.
+
+**Credentials never in git.** ESI `client_id` and `client_secret` live in `auspex.yaml` which is gitignored from day one. The repository contains only `auspex.example.yaml` with placeholder values.

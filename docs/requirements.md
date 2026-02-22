@@ -99,17 +99,15 @@ Everything else is a subsequent module after MVP.
 
 **Security**
 
-- OAuth2 tokens are stored locally in SQLite and are never sent anywhere except to ESI
+- OAuth2 tokens are stored locally in SQLite and are never sent anywhere except to ESI — this is an explicit trust boundary decision
 - The application is single-user — no multi-user authentication, no public access
+- Tokens must never appear in application logs; Chi Logger logs method, URL, status, and response time only — Authorization headers are not logged
+- All user-supplied input arriving at API boundaries (corporation_id, delegate_id, query parameters) must be validated before use
+- ESI credentials (client_id, client_secret) are stored in a local config file that is gitignored — never committed to the repository
 
 **Performance**
 
 - The UI responds instantly (data from local SQLite); ESI requests run in the background
-
-**Testability**
-
-- Key packages (`esi`, `sync`, `api`) are designed with dependency injection — dependencies are passed as interfaces, not hardcoded
-- This enables unit testing without a real ESI connection or SQLite database
 
 ---
 
