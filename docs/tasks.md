@@ -156,6 +156,39 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 
 ---
 
+## Supplementary — Smoke Test
+
+### TASK-S01 `cmd/smoketest` — OAuth + ESI smoke test
+**Description:** A standalone binary for manual end-to-end verification of the OAuth2 flow and ESI connectivity. Starts a minimal HTTP server with only two routes: `/auth/eve/login` and `/auth/eve/callback`. On successful callback: saves the character to SQLite, immediately fetches their blueprints from ESI, prints the result to stdout. The binary is self-contained — it wires config, db, store, auth, and esi directly in `main.go` without any abstractions.
+
+**Endpoints:**
+- `GET /auth/eve/login` — redirects to EVE SSO authorization URL
+- `GET /auth/eve/callback?code=...&state=...` — exchanges code, verifies character, saves to DB, fetches blueprints, prints to stdout, shuts down the server
+
+**What it verifies:**
+- `config.Load()` reads `auspex.yaml` correctly (client_id, client_secret, callback_url)
+- SQLite opens and migrations apply without errors
+- EVE SSO OAuth2 flow completes end-to-end (real CCP Developer App required)
+- `/verify` returns a valid character_id and name
+- Character is saved to `characters` table — visible in SQLite after run
+- ESI `GET /characters/{id}/blueprints` responds with parseable data
+- Token refresh path is reachable (token saved to DB is a valid refresh_token)
+
+**Definition of done:**
+- `go run ./cmd/smoketest/` starts server on port 8081 (hardcoded, does not conflict with main app)
+- Opening `localhost:8081/auth/eve/login` in a browser initiates EVE SSO flow
+- After successful auth: character name and blueprint count printed to stdout
+- After successful auth: server shuts down cleanly
+- Requires real `auspex.yaml` with valid credentials — documented in a comment at the top of `main.go`
+- No production code depends on this package
+- Removed in a dedicated commit once TASK-18 is complete and OAuth is verified in the full app
+
+**Dependencies:** TASK-03, TASK-05, TASK-07
+
+**Lifetime:** temporary — delete after TASK-18
+
+---
+
 ## Layer 4 — Sync Worker
 
 ### TASK-09 `sync` worker skeleton
@@ -469,6 +502,7 @@ TASK-01 (config)
 
 TASK-04 (esi base)
   ├── TASK-05 (esi blueprints/jobs) ← TASK-07, TASK-08
+  │     └── TASK-S01 (smoketest) ← TASK-03 [temporary]
   └── TASK-06 (esi universe) ← TASK-11
 
 TASK-18 (main) ← TASK-17, TASK-16
