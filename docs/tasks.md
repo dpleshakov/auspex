@@ -111,6 +111,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-06 `esi` universe
+**Status:** ✅ Done — commit TBD
+
 **Description:** ESI endpoints for EVE universe reference data.
 
 **Endpoints:**
