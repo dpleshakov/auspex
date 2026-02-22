@@ -154,10 +154,10 @@ Phase 7 consists of a repeating sequence: several tasks (Stage A) → layer revi
 3. Write tests together with the code in the same conversation
 4. Run code and tests, test manually
 5. If something is wrong (compilation errors, failing tests, logic errors) — correct in the same conversation
-6. Commit working code together with tests
-7. Update task status in `tasks.md` — add `✅ Done — commit <hash>` and commit in the same commit as the code
+6. Commit working code together with tests, updating `tasks.md` status to `✅ Done — commit TBD` in the same commit
+7. Run `git log --oneline -1` to get the real hash, replace `TBD` with it, commit `tasks.md` alone: `"Update TASK-XX commit hash in tasks.md"`
 
-Updating the task status and committing the code must be a **single commit**. Do not commit code without updating `tasks.md`, and do not update `tasks.md` separately.
+**Never use `git commit --amend` to add the hash** — amend changes the hash of the commit you are trying to record, making the stored hash immediately wrong. Always use a plain follow-up commit for the hash update.
 
 **Output:**
 - Working, committed code with tests
