@@ -161,6 +161,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Supplementary — Smoke Test
 
 ### TASK-S01 `cmd/smoketest` — OAuth + ESI smoke test
+**Status:** ✅ Done — commit 3587cfb
+
 **Description:** A standalone binary for manual end-to-end verification of the OAuth2 flow and ESI connectivity. Starts a minimal HTTP server with only two routes: `/auth/eve/login` and `/auth/eve/callback`. On successful callback: saves the character to SQLite, immediately fetches their blueprints from ESI, prints the result to stdout. The binary is self-contained — it wires config, db, store, auth, and esi directly in `main.go` without any abstractions.
 
 **Endpoints:**
