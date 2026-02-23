@@ -391,6 +391,42 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 
 ---
 
+## Supplementary — Smoke Test
+
+### TASK-S02 `cmd/auspex/web/dist/debug.html` — debug page for backend verification
+
+**Description:** A single static HTML file placed directly into `web/dist/`. No build step, no React, no dependencies — plain HTML with inline `<script>`. On page load, fetches all backend API endpoints in parallel and renders raw JSON responses on the page. Used to verify that the full backend stack works end-to-end before frontend development begins.
+
+**What it verifies:**
+- Static file serving works (`embed.FS` serves files from `web/dist/` correctly)
+- All API endpoints respond with expected HTTP status codes
+- Data returned from `/api/blueprints` contains correct structure after a real sync
+- `/api/jobs/summary` returns correct aggregate counts
+- `/api/sync/status` shows sync timestamps and owner names
+- `/api/characters` and `/api/corporations` list added subjects
+
+**How to use:**
+1. Start the binary: `./auspex`
+2. Complete OAuth flow to add at least one character: `localhost:8080/auth/eve/login`
+3. Trigger sync: `POST localhost:8080/api/sync` (via curl or browser devtools)
+4. Wait ~30 seconds, then open `localhost:8080/debug.html`
+5. Page displays JSON from all endpoints — verify data looks correct
+
+**Page layout:** one section per endpoint. Each section shows the endpoint URL, HTTP status, and response body as formatted JSON (`JSON.stringify(data, null, 2)` inside `<pre>`). Fetch errors displayed in red.
+
+**Definition of done:**
+- `debug.html` renders without errors in browser
+- All five endpoints fetched and displayed: `/api/characters`, `/api/corporations`, `/api/blueprints`, `/api/jobs/summary`, `/api/sync/status`
+- Errors shown clearly (red text + status code) when an endpoint fails
+- File is committed to `web/dist/` alongside `.gitkeep`
+- Removed in a dedicated commit once TASK-26 is complete and the real frontend is verified
+
+**Dependencies:** TASK-18
+
+**Lifetime:** temporary — delete after TASK-26
+
+---
+
 ## Layer 7 — Frontend
 
 ### TASK-20 Vite + React scaffold
