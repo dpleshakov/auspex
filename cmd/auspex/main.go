@@ -1,11 +1,26 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"flag"
+	"fmt"
+	"io/fs"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	stdsync "sync"
+	"syscall"
+	"time"
 
+	"github.com/dpleshakov/auspex/internal/api"
+	"github.com/dpleshakov/auspex/internal/auth"
 	"github.com/dpleshakov/auspex/internal/config"
+	"github.com/dpleshakov/auspex/internal/db"
+	"github.com/dpleshakov/auspex/internal/esi"
+	"github.com/dpleshakov/auspex/internal/store"
+	syncp "github.com/dpleshakov/auspex/internal/sync"
 )
 
 // staticFiles holds the compiled frontend, embedded at build time.
@@ -19,10 +34,84 @@ func main() {
 	configPath := flag.String("config", "auspex.yaml", "path to config file")
 	flag.Parse()
 
-	_, err := config.Load(*configPath)
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
 
-	// TODO(TASK-18): wire up db, store, esi, auth, sync, api.
+	database, err := db.Open(cfg.DBPath)
+	if err != nil {
+		log.Fatalf("db: %v", err)
+	}
+	defer database.Close()
+
+	queries := store.New(database)
+
+	esiClient := esi.NewClient(http.DefaultClient)
+
+	authProvider := auth.NewProvider(
+		cfg.ESI.ClientID,
+		cfg.ESI.ClientSecret,
+		cfg.ESI.CallbackURL,
+		queries,
+		nil,
+	)
+
+	// auth.Client wraps esiClient with automatic token injection and refresh.
+	// It shares the oauth2.Config from authProvider so credentials are consistent.
+	authClient := auth.NewClient(esiClient, queries, authProvider.OAuthConfig(), nil)
+
+	interval := time.Duration(cfg.RefreshInterval) * time.Minute
+	worker := syncp.New(queries, authClient, interval)
+
+	distFS, err := fs.Sub(staticFiles, "web/dist")
+	if err != nil {
+		log.Fatalf("preparing static files: %v", err)
+	}
+
+	router := api.NewRouter(queries, worker, authProvider, distFS)
+
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Handler: router,
+	}
+
+	// Start the sync worker in the background.
+	// The worker runs an initial cycle immediately, then ticks every RefreshInterval.
+	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	var wg stdsync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		worker.Run(workerCtx)
+	}()
+
+	// Handle SIGINT and SIGTERM for graceful shutdown.
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		log.Printf("received signal %s, shutting down", sig)
+
+		// Give in-flight HTTP requests up to 10 seconds to finish.
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
+
+		// Stop the sync worker and wait for the current cycle to finish.
+		cancelWorker()
+	}()
+
+	log.Printf("Auspex listening on http://localhost:%d", cfg.Port)
+	log.Printf("Add a character at http://localhost:%d/auth/eve/login", cfg.Port)
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("server: %v", err)
+	}
+
+	// Wait for the sync worker to complete its current cycle before exiting.
+	wg.Wait()
+	log.Println("shutdown complete")
 }

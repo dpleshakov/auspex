@@ -173,6 +173,12 @@ func (p *Provider) callVerify(ctx context.Context, accessToken string) (verifyRe
 	return v, nil
 }
 
+// OAuthConfig returns the underlying *oauth2.Config so that auth.NewClient
+// can share the same credentials for automatic token refresh.
+func (p *Provider) OAuthConfig() *oauth2.Config {
+	return p.conf
+}
+
 // randomState generates a cryptographically random 32-character hex string.
 func randomState() (string, error) {
 	b := make([]byte, 16)
