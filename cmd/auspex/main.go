@@ -105,7 +105,6 @@ func main() {
 	}()
 
 	log.Printf("Auspex listening on http://localhost:%d", cfg.Port)
-	log.Printf("Add a character at http://localhost:%d/auth/eve/login", cfg.Port)
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server: %v", err)
