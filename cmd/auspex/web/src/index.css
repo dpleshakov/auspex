@@ -213,3 +213,74 @@ body {
   white-space: nowrap;
   color: #a0a0a0;
 }
+
+.bp-table__th--sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.bp-table__th--sortable:hover {
+  color: #888;
+}
+
+/* ============================================================
+   BlueprintTable — filter bar
+   ============================================================ */
+
+.bp-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px;
+  background: #0d0f12;
+  border-bottom: 1px solid #1e2530;
+  flex-wrap: wrap;
+}
+
+.bp-filters__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp-filters__label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #555;
+  white-space: nowrap;
+}
+
+.bp-filters__select {
+  background: #1a1e26;
+  border: 1px solid #1e2530;
+  color: #c0c0c0;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+}
+
+.bp-filters__select:hover {
+  border-color: #2a3040;
+}
+
+.bp-filters__select:focus {
+  border-color: #3a4a60;
+}
+
+.bp-filters__clear {
+  background: none;
+  border: 1px solid #2e2e2e;
+  color: #777;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.bp-filters__clear:hover {
+  border-color: #555;
+  color: #bbb;
+}

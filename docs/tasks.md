@@ -500,6 +500,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-24 `BlueprintTable` sorting + filtering
+**Status:** ✅ Done — commit TBD
+
 **Description:** Add sorting and filtering to the blueprint table.
 
 **Sorting:** Default sort: status priority (Overdue → Ready → Idle → Active), then end_date ascending. User can override by clicking column headers.
