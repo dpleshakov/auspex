@@ -539,7 +539,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-26 `App` + auto-polling
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 6caff01
 
 **Description:** Top-level `App` component assembling all components. Auto-polling logic and force-refresh flow.
 
