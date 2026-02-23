@@ -385,3 +385,35 @@ to `vite@7` (breaking change).
 (`npm run dev`), not the production build embedded in the binary. End users
 never run the dev server. Fix before onboarding external contributors: upgrade
 to `vite@7` and resolve any breaking changes in the Vite config.
+
+---
+
+### TD-23 Uncovered test cases — ⏭ Won't fix (MVP)
+
+The following scenarios are not covered by tests. All of them are second-order
+edge cases; critical paths and happy paths are fully tested.
+
+**`internal/api/blueprints_test.go`**
+- Valid numeric `owner_id` and `category_id` are only checked for invalid format
+  (400), but not that a valid value is propagated into
+  `ListBlueprintsParams.OwnerID/CategoryID`.
+- A combination of multiple filters applied simultaneously is not tested.
+
+**`internal/api/characters_test.go`, `corporations_test.go`**
+- `DELETE /api/characters/{id}` and `DELETE /api/corporations/{id}` with a
+  non-existent ID are not covered — it is unclear whether the handler returns
+  404 or 204 (No Content).
+
+**`internal/sync/sync_subject_test.go`**
+- ESI returns an empty jobs list (`[]`) — in this case all existing jobs in the
+  DB for the given owner should be deleted. A test for the partially-stale case
+  exists, but an empty list is not tested.
+
+**`internal/config/config_test.go`**
+- A syntactically invalid YAML file (not semantically invalid, but truly
+  malformed YAML). A parse error is expected, but the behaviour is not specified
+  by a test.
+
+**Not a problem for MVP** — all described cases are either handled correctly by
+default (standard library errors) or affect rare scenarios. Fix when next
+touching these handlers: add targeted test cases.
