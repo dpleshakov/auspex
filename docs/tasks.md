@@ -320,6 +320,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-16 `api` sync endpoints
+**Status:** ✅ Done — commit TBD
+
 **Description:** Sync control endpoints.
 
 **Endpoints:**

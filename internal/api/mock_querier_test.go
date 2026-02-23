@@ -25,6 +25,7 @@ type mockQuerier struct {
 	CountOverdueJobsFn       func(ctx context.Context) (int64, error)
 	CountCompletingTodayFn   func(ctx context.Context) (int64, error)
 	ListCharacterSlotUsageFn func(ctx context.Context) ([]store.ListCharacterSlotUsageRow, error)
+	ListSyncStatusFn         func(ctx context.Context) ([]store.ListSyncStatusRow, error)
 }
 
 func (m *mockQuerier) ListCharacters(ctx context.Context) ([]store.Character, error) {
@@ -162,6 +163,9 @@ func (m *mockQuerier) ListJobIDsByOwner(ctx context.Context, arg store.ListJobID
 }
 
 func (m *mockQuerier) ListSyncStatus(ctx context.Context) ([]store.ListSyncStatusRow, error) {
+	if m.ListSyncStatusFn != nil {
+		return m.ListSyncStatusFn(ctx)
+	}
 	return nil, nil
 }
 
