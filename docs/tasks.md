@@ -467,7 +467,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-22 `CharactersSection` component
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 501a4ef
 
 **Description:** Per-character slot usage table from `GET /api/jobs/summary`.
 
