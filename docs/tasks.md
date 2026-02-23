@@ -539,6 +539,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-26 `App` + auto-polling
+**Status:** ✅ Done — commit TBD
+
 **Description:** Top-level `App` component assembling all components. Auto-polling logic and force-refresh flow.
 
 **Auto-polling:** Fetch `getBlueprints()` and `getJobsSummary()` every N minutes (read from config endpoint or hardcode default 10 min for MVP).

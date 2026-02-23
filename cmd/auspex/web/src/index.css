@@ -23,6 +23,94 @@ body {
 }
 
 /* ============================================================
+   App layout
+   ============================================================ */
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #0d0f12;
+  border-bottom: 1px solid #1e2530;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header__title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c8c8c8;
+}
+
+.app-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-add-char-link {
+  font-size: 12px;
+  color: #5b9bd5;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.app-add-char-link:hover {
+  color: #7ab8f0;
+  text-decoration: underline;
+}
+
+.app-refresh-btn {
+  background: #1a1e26;
+  border: 1px solid #2a3040;
+  color: #a0b0c8;
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.app-refresh-btn:hover:not(:disabled) {
+  border-color: #4a6080;
+  color: #c8d8f0;
+}
+
+.app-refresh-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.app-refresh-btn--refreshing {
+  color: #7a9fc0;
+  border-color: #2a4060;
+}
+
+.app-loading {
+  padding: 40px 16px;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+.app-error {
+  padding: 16px;
+  color: #d9534f;
+  font-size: 13px;
+}
+
+/* ============================================================
    SummaryBar
    ============================================================ */
 
