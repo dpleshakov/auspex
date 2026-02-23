@@ -376,7 +376,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-19 Build scripts
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 5d71a4b
 
 **Description:** Finalize `scripts/build.sh` and `scripts/build.cmd` for full cross-platform builds.
 
