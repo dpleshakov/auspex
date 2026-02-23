@@ -450,7 +450,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-21 `SummaryBar` component
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 1ef5773
 
 **Description:** Top summary bar showing aggregate counts from `GET /api/jobs/summary`.
 
