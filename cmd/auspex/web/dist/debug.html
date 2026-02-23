@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auspex — Backend Debug</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #0d1117;
+      color: #c9d1d9;
+      margin: 0;
+      padding: 24px;
+    }
+    h1 {
+      color: #f0f6fc;
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+    .subtitle {
+      color: #8b949e;
+      font-size: 0.85rem;
+      margin-bottom: 32px;
+    }
+    .endpoint {
+      margin-bottom: 32px;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+    }
+    .method {
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: #1f6feb;
+      color: #fff;
+    }
+    .url {
+      color: #79c0ff;
+      font-size: 0.95rem;
+    }
+    .status {
+      margin-left: auto;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+    .status.ok   { color: #3fb950; }
+    .status.err  { color: #f85149; }
+    .status.pending { color: #8b949e; }
+    pre {
+      margin: 0;
+      padding: 16px;
+      font-size: 0.8rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+    pre.error { color: #f85149; }
+  </style>
+</head>
+<body>
+  <h1>Auspex — Backend Debug</h1>
+  <p class="subtitle">
+    Fetches all API endpoints on load and displays raw JSON responses.<br>
+    Use this page to verify the backend stack works end-to-end before frontend development.
+  </p>
+  <div id="root"></div>
+
+  <script>
+    const ENDPOINTS = [
+      '/api/characters',
+      '/api/corporations',
+      '/api/blueprints',
+      '/api/jobs/summary',
+      '/api/sync/status',
+    ];
+
+    function renderSection(url) {
+      const section = document.createElement('div');
+      section.className = 'endpoint';
+
+      const header = document.createElement('div');
+      header.className = 'endpoint-header';
+
+      const method = document.createElement('span');
+      method.className = 'method';
+      method.textContent = 'GET';
+
+      const urlSpan = document.createElement('span');
+      urlSpan.className = 'url';
+      urlSpan.textContent = url;
+
+      const statusSpan = document.createElement('span');
+      statusSpan.className = 'status pending';
+      statusSpan.textContent = '…';
+
+      header.appendChild(method);
+      header.appendChild(urlSpan);
+      header.appendChild(statusSpan);
+
+      const pre = document.createElement('pre');
+      pre.textContent = 'Loading…';
+
+      section.appendChild(header);
+      section.appendChild(pre);
+      document.getElementById('root').appendChild(section);
+
+      fetch(url)
+        .then(async (res) => {
+          statusSpan.textContent = res.status + ' ' + res.statusText;
+          statusSpan.className = 'status ' + (res.ok ? 'ok' : 'err');
+
+          const text = await res.text();
+          try {
+            pre.textContent = JSON.stringify(JSON.parse(text), null, 2);
+          } catch {
+            pre.textContent = text;
+          }
+        })
+        .catch((err) => {
+          statusSpan.textContent = 'FETCH ERROR';
+          statusSpan.className = 'status err';
+          pre.className = 'error';
+          pre.textContent = String(err);
+        });
+    }
+
+    ENDPOINTS.forEach(renderSection);
+  </script>
+</body>
+</html>

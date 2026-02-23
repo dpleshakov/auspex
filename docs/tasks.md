@@ -396,6 +396,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Supplementary — Smoke Test
 
 ### TASK-S02 `cmd/auspex/web/dist/debug.html` — debug page for backend verification
+**Status:** ✅ Done — commit TBD
 
 **Description:** A single static HTML file placed directly into `web/dist/`. No build step, no React, no dependencies — plain HTML with inline `<script>`. On page load, fetches all backend API endpoints in parallel and renders raw JSON responses on the page. Used to verify that the full backend stack works end-to-end before frontend development begins.
 
