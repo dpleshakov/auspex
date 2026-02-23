@@ -567,7 +567,6 @@ TASK-01 (config)
 
 TASK-04 (esi base)
   ├── TASK-05 (esi blueprints/jobs) ← TASK-07, TASK-08
-  │     └── TASK-S01 (smoketest) ← TASK-03 [temporary]
   └── TASK-06 (esi universe) ← TASK-11
 
 TASK-18 (main) ← TASK-17, TASK-16
