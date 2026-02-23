@@ -360,7 +360,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 6 — Main + Build
 
 ### TASK-18 `main.go` + example config
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 60441ef
 
 **Description:** Application entry point. Wires all packages together: load config, open DB, run migrations, create store, create esi client, create auth client, start sync worker, start HTTP server. Graceful shutdown on SIGINT/SIGTERM. Create `auspex.example.yaml`.
 
