@@ -450,6 +450,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-21 `SummaryBar` component
+**Status:** ✅ Done — commit TBD
+
 **Description:** Top summary bar showing aggregate counts from `GET /api/jobs/summary`.
 
 **Displays:** Idle BPOs / Overdue jobs / Completing today / Free research slots. Each as a labeled count, visually distinct for non-zero overdue and idle values.
