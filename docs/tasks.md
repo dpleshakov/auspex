@@ -483,6 +483,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-23 `BlueprintTable` scaffold
+**Status:** ✅ Done — commit TBD
+
 **Description:** Basic BPO table using TanStack Table v8. Fetches data from `GET /api/blueprints`. Renders all columns without sorting, filtering, or highlighting.
 
 **Columns:** Name / Category / Assigned (owner name) / Location / ME% / TE% / Status / Date End

@@ -155,3 +155,61 @@ body {
   color: #4caf50;
   font-weight: 600;
 }
+
+/* ============================================================
+   BlueprintTable
+   ============================================================ */
+
+.bp-table-state {
+  padding: 16px;
+  color: #666;
+  font-size: 13px;
+}
+
+.bp-table-state--error {
+  color: #d9534f;
+}
+
+.bp-table-state--empty {
+  color: #555;
+}
+
+.bp-table-wrapper {
+  overflow-x: auto;
+  padding: 0 0 16px;
+}
+
+.bp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.bp-table__th {
+  padding: 8px 12px;
+  text-align: left;
+  white-space: nowrap;
+  color: #555;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  border-bottom: 1px solid #1e2530;
+  background: #0d0f12;
+  position: sticky;
+  top: 0;
+}
+
+.bp-table__row {
+  border-bottom: 1px solid #141720;
+}
+
+.bp-table__row:hover {
+  background: #12151a;
+}
+
+.bp-table__td {
+  padding: 7px 12px;
+  white-space: nowrap;
+  color: #a0a0a0;
+}
