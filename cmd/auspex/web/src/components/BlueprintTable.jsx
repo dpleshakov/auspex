@@ -22,6 +22,23 @@ function getFullStatusLabel(row) {
   }
 }
 
+function isToday(isoStr) {
+  if (!isoStr) return false
+  const d = new Date(isoStr)
+  const now = new Date()
+  return d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+}
+
+// Returns extra CSS class for the table row based on job status.
+function getRowClass(row) {
+  const label = getFullStatusLabel(row)
+  if (label === 'Overdue') return 'bp-table__row--overdue'
+  if (row.job?.status === 'active' && isToday(row.job?.end_date)) return 'bp-table__row--completing-today'
+  return ''
+}
+
 // Numeric priority for default sort (lower = higher in table).
 function getStatusPriority(row) {
   switch (getFullStatusLabel(row)) {
@@ -136,7 +153,11 @@ export default function BlueprintTable({ blueprints: externalBlueprints }) {
       id: 'status',
       header: 'Status',
       accessorFn: row => getFullStatusLabel(row),
-      cell: ({ getValue }) => getValue(),
+      cell: ({ getValue }) => {
+        const label = getValue()
+        if (label === 'Idle') return <span className="bp-status--idle">{label}</span>
+        return label
+      },
       sortingFn: (rowA, rowB) =>
         getStatusPriority(rowA.original) - getStatusPriority(rowB.original),
     },
@@ -244,15 +265,18 @@ export default function BlueprintTable({ blueprints: externalBlueprints }) {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map(row => (
-              <tr key={row.id} className="bp-table__row">
+            {table.getRowModel().rows.map(row => {
+              const rowClass = getRowClass(row.original)
+              return (
+              <tr key={row.id} className={rowClass ? `bp-table__row ${rowClass}` : 'bp-table__row'}>
                 {row.getVisibleCells().map(cell => (
                   <td key={cell.id} className="bp-table__td">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
               </tr>
-            ))}
+            )
+          })}
           </tbody>
         </table>
 

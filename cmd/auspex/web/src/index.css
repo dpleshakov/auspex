@@ -284,3 +284,38 @@ body {
   border-color: #555;
   color: #bbb;
 }
+
+/* ============================================================
+   BlueprintTable — row highlighting
+   ============================================================ */
+
+/* Red: overdue (status=ready, end_date in the past) */
+.bp-table__row--overdue {
+  background: #1e0e0e;
+}
+
+.bp-table__row--overdue:hover {
+  background: #241212;
+}
+
+.bp-table__row--overdue .bp-table__td {
+  color: #d0a0a0;
+}
+
+/* Yellow: completing today (status=active, end_date is today) */
+.bp-table__row--completing-today {
+  background: #191500;
+}
+
+.bp-table__row--completing-today:hover {
+  background: #1f1c00;
+}
+
+.bp-table__row--completing-today .bp-table__td {
+  color: #c8b870;
+}
+
+/* Idle status label — muted */
+.bp-status--idle {
+  color: #555;
+}

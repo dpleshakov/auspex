@@ -519,6 +519,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-25 `BlueprintTable` row highlighting
+**Status:** ✅ Done — commit TBD
+
 **Description:** Visual highlighting of rows based on job status and end date.
 
 **Rules:**
