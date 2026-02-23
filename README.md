@@ -4,7 +4,7 @@ A local desktop tool for EVE Online industry players who manage multiple manufac
 
 ## Features
 
-- Multi-character and multi-corporation support via EVE SSO OAuth2
+- Multi-character support via EVE SSO OAuth2
 - Unified BPO table with ME%, TE%, status, owner, location, and job end date
 - Visual row highlighting: red for overdue jobs, yellow for jobs completing today
 - Summary bar: idle BPOs / overdue / completing today / free research slots
@@ -93,7 +93,9 @@ http://localhost:8080/auth/eve/login
 
 Complete the EVE SSO flow. After a successful login, Auspex immediately triggers a sync and redirects you to the dashboard.
 
-Repeat for each character. To track a corporation, use the `POST /api/corporations` endpoint — see [api-docs.md](docs/api-docs.md).
+Repeat for each character.
+
+> **Corporation support is not yet available via the UI.** The backend endpoint `POST /api/corporations` exists but there is no frontend for it — this is a known bug tracked in [docs/tasks-backlog.md](docs/tasks-backlog.md).
 
 ## Configuration
 
