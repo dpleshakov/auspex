@@ -9,8 +9,10 @@ import (
 )
 
 // writeJSON encodes v as JSON and writes it with the given status code.
-// Content-Type is expected to be set already by middleware.
+// Sets Content-Type: application/json unconditionally so callers outside the
+// /api middleware group (e.g. /auth error responses) also get the correct header.
 func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
 }

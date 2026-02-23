@@ -66,6 +66,9 @@ func TestHandleLogin_500WhenGenerateFails(t *testing.T) {
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", rr.Code)
 	}
+	if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", ct)
+	}
 }
 
 // --- GET /auth/eve/callback ---

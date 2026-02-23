@@ -204,3 +204,93 @@ query results with no error or warning.
 and the retry on the next tick will usually succeed. Fix if needed: change
 to `LEFT JOIN eve_types` and use `COALESCE(t.name, 'Unknown Type ' || b.type_id)`
 as the fallback name so the blueprint always appears on the dashboard.
+
+---
+
+## Layer 5 Review — API (router, handlers)
+
+### TD-13 `writeJSON` did not set `Content-Type` — ✅ Fixed
+
+**File:** `internal/api/response.go`
+
+`writeJSON` relied on the `jsonContentType` middleware to set
+`Content-Type: application/json`, but that middleware is only applied to
+the `/api/*` route group. Error responses from `/auth/eve/login` and
+`/auth/eve/callback` were sent as JSON without the correct header.
+
+**Fix:** `w.Header().Set("Content-Type", "application/json")` moved into
+`writeJSON` itself, before `w.WriteHeader(status)`. The `jsonContentType`
+middleware is kept for documentation intent and is now a no-op (idempotent
+`Header.Set`). Test `TestHandleLogin_500WhenGenerateFails` extended to
+assert the header is present.
+
+---
+
+### TD-14 Cascade delete is non-atomic — ⏭ Won't fix (MVP)
+
+**Files:** `internal/api/characters.go`, `internal/api/corporations.go`
+
+`handleDeleteCharacter` and `handleDeleteCorporation` each perform four
+consecutive `store.Querier` calls (delete blueprints → jobs → sync_state →
+entity) with no wrapping transaction. A crash or context cancellation
+between any two calls leaves the database in a partially deleted state:
+for example, blueprints deleted but the character row still present, or
+vice-versa.
+
+**Not a problem for MVP** — the app is a local single-user desktop tool
+with SQLite. A mid-delete crash is rare and the worst outcome is cosmetic
+(a phantom character with no data, or orphaned data rows). Fix before
+exposing delete endpoints to concurrent or networked use: wrap the four
+calls in a `sql.Tx` and surface a `WithTx(*sql.Tx) store.Querier` method
+from the store package so handlers can participate in transactions.
+
+---
+
+### TD-15 Duplicate corporation insert returns 500 instead of 409 — ⏭ Won't fix (MVP)
+
+**File:** `internal/api/corporations.go`
+
+`InsertCorporation` uses `INSERT OR IGNORE` (or similar), so inserting a
+corporation with an `id` that already exists silently succeeds. If the
+underlying SQL used `INSERT` without `OR IGNORE`, a unique constraint
+violation would propagate as a generic 500. The current schema and sqlc
+query should be verified; if the handler ever surfaces constraint errors,
+they should be mapped to 409 Conflict rather than 500.
+
+**Not a problem for MVP** — re-adding a known corporation is an uncommon
+user action and the current behaviour is at worst confusing.
+
+---
+
+### TD-16 EVE SSO user-cancel produces unhelpful 400 — ⏭ Won't fix (MVP)
+
+**File:** `internal/api/oauth.go`
+
+When the user clicks "Cancel" on the EVE SSO authorization page, EVE
+redirects to the callback URL with `?error=access_denied` (no `code`
+parameter). The current handler checks `if code == "" || state == ""` and
+returns 400 "missing code or state" — technically correct but unhelpful.
+
+**Not a problem for MVP** — the user sees the browser's raw 400 page
+for a moment before the tab can be closed. Fix: check `req.URL.Query().Get("error")`
+first and redirect to `/?auth_error=cancelled` so the frontend can show a
+friendly message.
+
+---
+
+### TD-17 CORS wildcard applies to auth endpoints — ⏭ Won't fix (MVP)
+
+**File:** `internal/api/router.go`
+
+The `corsMiddleware` sets `Access-Control-Allow-Origin: *` globally,
+including on `/auth/eve/login` and `/auth/eve/callback`. In theory this
+allows any website open in the same browser to initiate or interfere with
+the OAuth flow. In practice the risk is negligible: the OAuth callback
+validates a random `state` parameter (CSRF mitigation), and the app only
+listens on `localhost`.
+
+**Not a problem for MVP** — this is a local desktop tool. Fix if the
+app is ever exposed to a non-localhost network: restrict the allowed origin
+to the frontend origin (e.g. `http://localhost:5173` in dev, `http://localhost:PORT`
+in production), or remove the global CORS middleware and apply it only to
+`/api/*`.
