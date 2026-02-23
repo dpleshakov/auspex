@@ -6,6 +6,7 @@ import { getBlueprints, getJobsSummary, postSync, getSyncStatus } from './api/cl
 
 const AUTO_REFRESH_MS = 10 * 60 * 1000  // 10 minutes
 const SYNC_POLL_MS = 2000               // 2 s between force-refresh polls
+const SYNC_POLL_MAX_MS = 60_000         // give up waiting after 60 s
 
 export default function App() {
   const [blueprints, setBlueprints] = useState(null)
@@ -57,8 +58,20 @@ export default function App() {
     // Record when the sync was triggered. Any last_sync timestamp after this
     // point means the forced sync cycle has completed.
     const refTime = new Date()
+    const deadline = Date.now() + SYNC_POLL_MAX_MS
 
     syncPollRef.current = setInterval(async () => {
+      // Safety valve: if no completion signal arrives within the timeout
+      // (e.g. no characters added yet, or persistent ESI errors), give up
+      // waiting and reload data anyway so the UI doesn't stay stuck.
+      if (Date.now() >= deadline) {
+        clearInterval(syncPollRef.current)
+        syncPollRef.current = null
+        await loadData()
+        setIsRefreshing(false)
+        return
+      }
+
       try {
         const statuses = await getSyncStatus()
         const done =

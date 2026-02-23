@@ -294,3 +294,94 @@ app is ever exposed to a non-localhost network: restrict the allowed origin
 to the frontend origin (e.g. `http://localhost:5173` in dev, `http://localhost:PORT`
 in production), or remove the global CORS middleware and apply it only to
 `/api/*`.
+
+---
+
+## Layer 7 Review — Frontend (React)
+
+### TD-18 Sticky blueprint table header overlaps sticky app header — ✅ Fixed
+
+**File:** `cmd/auspex/web/src/index.css`
+
+`.bp-table__th` had `position: sticky; top: 0`, which caused the table header
+to scroll behind (and visually under) the sticky `.app-header` when the user
+scrolled down. The app header has `z-index: 10`, so the table header was hidden
+rather than overlapping on top, but it was effectively invisible at the stuck
+position.
+
+**Fix:** Changed `top: 0` to `top: 51px` (approximate rendered height of
+`.app-header`: button ~28px content + 2×10px padding + 1px border). Added
+`z-index: 1` so the table header renders above table rows during horizontal
+scroll. If the header height changes (e.g. after a UI redesign), this value
+must be updated manually.
+
+---
+
+### TD-19 Force-refresh poll runs indefinitely when sync_state is empty — ✅ Fixed
+
+**File:** `cmd/auspex/web/src/App.jsx`
+
+`handleRefresh()` starts a `setInterval` that polls `GET /api/sync/status` and
+stops when it finds a `last_sync` timestamp newer than when Refresh was clicked.
+If no characters are added yet, `sync_state` is empty and the API returns `[]`.
+`statuses.some(...)` is always false, so the interval never clears and
+`isRefreshing` stays `true` forever — the button shows "Refreshing…" until
+page reload.
+
+**Fix:** Added a `SYNC_POLL_MAX_MS = 60_000` deadline. If no completion signal
+arrives within 60 seconds, the poll clears itself, calls `loadData()`, and resets
+`isRefreshing`. This covers: no characters added, persistent ESI errors, or any
+other case where sync never writes a fresh `last_sync`.
+
+---
+
+### TD-20 Dual-fetch dead code in leaf components — ⏭ Won't fix (MVP)
+
+**Files:** `src/components/SummaryBar.jsx`, `src/components/CharactersSection.jsx`,
+`src/components/BlueprintTable.jsx`
+
+Each component was built in two phases: first with internal data fetching
+(TASK-21–23), then adapted to accept props from `App` (TASK-26). The internal
+fetch paths (`getJobsSummary()` / `getBlueprints()` called inside `useEffect`)
+remain in the code but are unreachable in the current wiring — `App` always
+passes non-`undefined` props, so the `if (externalXxx !== undefined)` branch
+always fires immediately.
+
+The dead code adds ~15 lines per component and two redundant `useState` pairs
+(`loading`, `error`) that are set but then immediately overwritten.
+
+**Not a problem for MVP** — the dead paths are harmless and the components
+still work correctly. Fix in post-MVP cleanup: remove internal fetch logic,
+accept data purely via props, lift error/loading state entirely into `App`.
+
+---
+
+### TD-21 Location column shows raw numeric ESI `location_id` — ⏭ Won't fix (MVP)
+
+**File:** `src/components/BlueprintTable.jsx`
+
+The "Location" column renders the raw `location_id` integer from the API response
+(e.g. `60003760`). Resolving this to a human-readable station or structure name
+requires `POST /universe/names/` bulk resolution — the same pattern as type
+resolution, but location IDs change more frequently (structures can be destroyed
+or renamed).
+
+**Not a problem for MVP** — experienced EVE players recognize common station IDs.
+Fix post-MVP: add a `locations` table and a background resolver similar to
+`resolveTypeIDs`, then join in `ListBlueprints` query.
+
+---
+
+### TD-22 esbuild moderate vulnerability in dev dependency — ⏭ Won't fix (MVP)
+
+**File:** `cmd/auspex/web/package.json` (transitively via `vite`)
+
+`npm audit` reports a moderate-severity vulnerability in `esbuild ≤ 0.24.2`
+(GHSA-67mh-4wv8-2f99): the esbuild dev server can be made to proxy arbitrary
+requests from any website open in the same browser. The fix requires upgrading
+to `vite@7` (breaking change).
+
+**Not a problem for MVP** — the vulnerability affects only the Vite dev server
+(`npm run dev`), not the production build embedded in the binary. End users
+never run the dev server. Fix before onboarding external contributors: upgrade
+to `vite@7` and resolve any breaking changes in the Vite config.
