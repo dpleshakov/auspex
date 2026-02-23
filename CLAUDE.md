@@ -12,7 +12,7 @@ Delivered as a **single Go binary** with the React frontend embedded via `go:emb
 
 Development follows a strict phase-by-phase process. Do not skip phases or jump ahead. Each phase has defined inputs and outputs — the output of one phase is the input of the next.
 
-**Current active phase: Phase 7 — Iterative Development**
+**Current status: MVP shipped — Post-MVP continuous development**
 
 ### Phase Overview
 
@@ -23,8 +23,8 @@ Development follows a strict phase-by-phase process. Do not skip phases or jump 
 | 3 | Tech Stack | `requirements.md` | `tech-stack.md` |
 | 4 | Architecture | `requirements.md` + `tech-stack.md` | `architecture.md` |
 | 5 | Project Structure | `architecture.md` | File structure + `project-structure.md` |
-| 6 | Task Breakdown | `requirements.md` + `architecture.md` | `tasks.md` |
-| **7** | **Iterative Development** ← current | Task + context | Working, committed code + `tech-debt.md` |
+| 6 | Task Breakdown | `requirements.md` + `architecture.md` | `tasks-mvp.md` |
+| 7 | Iterative Development | Task + context | Working, committed code + `tech-debt.md` |
 | 8 | Documentation | Finished product | `README.md`, `api-docs.md`, `deployment.md` |
 
 ---
@@ -126,7 +126,7 @@ Ask AI to generate the project file structure. Create a skeleton — directories
 **What to do:**
 Break the project into tasks — small, atomic, each resulting in working code. Each task should be completable in one AI conversation (30–100 lines of code). Set dependencies and order.
 
-**Output:** `tasks.md`
+**Output:** `tasks-mvp.md` (for the first MVP scope)
 - Task list with descriptions
 - Definition of done for each task — including what tests are required
 - Dependencies between tasks
@@ -138,13 +138,26 @@ Break the project into tasks — small, atomic, each resulting in working code. 
 **Status:** ✅ Done — commit abc1234
 ```
 
+**Naming and lifecycle of tasks files:**
+
+Each tasks file covers one scope — MVP or a specific post-MVP module. The file is named after the scope it represents:
+
+- `tasks-mvp.md` — the first release scope
+- `tasks-{module}.md` — each subsequent module (e.g., `tasks-manufacturing.md`, `tasks-analytics.md`)
+
+Use `tasks-template.md` as a starting point for each new tasks file.
+
+A tasks file is **active** while work is in progress. When all tasks are complete — update the header status to `Archived` and move the file to `docs/archive/`. Do not accumulate multiple modules in one file.
+
 ---
 
 ### Phase 7 — Iterative Development (main loop)
 
-Phase 7 consists of a repeating sequence: several tasks (Stage A) → layer review (Stage B) → next tasks. A layer = one layer from `tasks.md` (e.g., all backend or all frontend).
+Phase 7 consists of a repeating sequence: several tasks (Stage A) → layer review (Stage B) → next tasks. A layer = one layer from the active tasks file (e.g., all backend or all frontend).
 
-#### Stage A — Task (repeated for each task in `tasks.md`)
+Bugs and minor improvements discovered during development are recorded in `tasks-backlog.md` — not in the active tasks file and not in `tech-debt.md`. See the "Life of the project after MVP" section for details on when and how to work with them.
+
+#### Stage A — Task (repeated for each task in the active tasks file)
 
 **Input:** specific task + relevant context (required files, API contracts)
 
@@ -154,16 +167,16 @@ Phase 7 consists of a repeating sequence: several tasks (Stage A) → layer revi
 3. Write tests together with the code in the same conversation
 4. Run code and tests, test manually
 5. If something is wrong (compilation errors, failing tests, logic errors) — correct in the same conversation
-6. Commit working code together with tests, updating `tasks.md` status to `✅ Done — commit TBD` in the same commit
-7. Run `git log --oneline -1` to get the real hash, replace `TBD` with it, commit `tasks.md` alone: `"Update TASK-XX commit hash in tasks.md"`
+6. Commit working code together with tests, updating the task status to `✅ Done — commit TBD` in the same commit
+7. Run `git log --oneline -1` to get the real hash, replace `TBD` with it, commit the tasks file alone: `"Update TASK-XX commit hash in tasks-{scope}.md"`
 
 **Never use `git commit --amend` to add the hash** — amend changes the hash of the commit you are trying to record, making the stored hash immediately wrong. Always use a plain follow-up commit for the hash update.
 
 **Output:**
 - Working, committed code with tests
-- `tasks.md` with up-to-date status of the completed task (in the same commit)
+- Active tasks file with up-to-date status of the completed task (in the same commit)
 
-#### Stage B — Layer Review (after completing each layer from `tasks.md`)
+#### Stage B — Layer Review (after completing each layer)
 
 **Input:** all tasks in the layer are completed and committed
 
@@ -199,6 +212,48 @@ AI helps write the README, API documentation, and startup/deployment instruction
 
 ---
 
+### Life of the project after MVP
+
+After MVP ships, the project enters continuous development mode. Phases 1–5 are complete; their documents (`requirements.md`, `architecture.md`, etc.) become living references — updated when a new module arrives, not recreated from scratch.
+
+#### Adding a new module
+
+A new module goes through the same Phase 6 → Phase 7 → Phase 8 cycle within its own scope:
+
+1. Update `requirements.md` — add a new section with the module's requirements (additive, do not rewrite existing content). If the module changes existing architectural decisions — archive the old `architecture.md` and create a new version.
+2. Run Phase 6: create `tasks-{module}.md` from `tasks-template.md`.
+3. Run Phase 7: develop iteratively, layer by layer, with a review after each layer.
+4. Run Phase 8: update `api-docs.md`, `deployment.md`, `CHANGELOG.md`.
+5. When all tasks are complete: set status `Archived` in the tasks file header, move to `docs/archive/`.
+
+#### Bugs and minor improvements
+
+During development and after MVP, bugs and minor improvements are recorded in `tasks-backlog.md`. This file lives for the entire lifetime of the project.
+
+**What goes into `tasks-backlog.md`:**
+- Something is broken (bug)
+- A minor cosmetic or UX improvement — no design needed, closeable in one pass
+- Something noticed while working on another task
+
+**What goes into `tech-debt.md` instead:**
+- A known problem with an explicit decision to defer, with rationale
+- Something that requires design or architectural thinking before implementation
+- A trade-off consciously accepted during a layer review
+
+**Practical test:** if in a code review you would write "this needs fixing" — it's backlog. If you would write "this is a conscious trade-off, document it" — it's tech-debt.
+
+**How to work with the backlog:**
+- Add entries freely as you notice them — with prefix `BUG`, `CHORE`, or `IMPROVEMENT`
+- Pick tasks from Open and close them with individual commits, without creating a tasks file
+- Move closed tasks to the Closed section with the commit hash
+- If a backlog task turns out to be significant and touches multiple packages — promote it to a full `tasks-{module}.md` instead of fixing it inline
+
+#### Keeping live documents in order
+
+`requirements.md` and `architecture.md` are updated as the product grows. `tech-debt.md` is maintained continuously: resolved entries move to a Closed section, won't-fix entries stay in Active until their trigger condition arrives. Tasks files are archived after completion. `tasks-backlog.md` is never archived — it simply accumulates a Closed section over time.
+
+---
+
 ### Language Standard
 
 **All code must be in English.** This applies without exception to:
@@ -215,7 +270,7 @@ The only permitted exceptions are EVE Online proper nouns (ship names, item name
 
 ### Core Principles for Working with AI
 
-**Context is everything.** AI does not remember past sessions. Documents from previous phases are your shared memory. Pass the relevant files at the start of each conversation. `tasks.md` with current task statuses is a required file at the start of every Phase 7 conversation: AI immediately sees what is done, what is not, and avoids revisiting already-resolved questions.
+**Context is everything.** AI does not remember past sessions. Documents from previous phases are your shared memory. Pass the relevant files at the start of each conversation. The active tasks file with current task statuses is a required file at the start of every Phase 7 conversation: AI immediately sees what is done, what is not, and avoids revisiting already-resolved questions.
 
 **Small tasks beat large ones.** One task = one conversation. "Build the entire backend" works worse than "implement the `POST /users` endpoint with validation and database write".
 
