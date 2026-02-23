@@ -338,6 +338,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-17 `api` OAuth handlers
+**Status:** ✅ Done — commit TBD
+
 **Description:** EVE SSO OAuth2 HTTP handlers.
 
 **Endpoints:**

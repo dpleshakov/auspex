@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,10 @@ import (
 
 	"github.com/dpleshakov/auspex/internal/store"
 )
+
+// ErrInvalidState is returned by HandleCallback when the OAuth state parameter
+// does not match any pending authorization request.
+var ErrInvalidState = errors.New("invalid or expired OAuth state")
 
 // oauth.go: authorization URL generation, code→token exchange, /verify call.
 
@@ -102,7 +107,7 @@ func (p *Provider) HandleCallback(ctx context.Context, code, state string) (int6
 	p.mu.Unlock()
 
 	if !valid {
-		return 0, fmt.Errorf("invalid or expired OAuth state")
+		return 0, ErrInvalidState
 	}
 
 	// Inject the custom HTTP client so oauth2 uses it for the token exchange.
