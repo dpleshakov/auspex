@@ -206,6 +206,19 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 		return cacheUntil, fmt.Errorf("fetching blueprints: %w", err)
 	}
 
+	// Resolve type_ids from the ESI response before upserting blueprints.
+	// blueprints.type_id has a FK to eve_types.id, so eve_types rows must
+	// exist before the INSERT or the statement fails with a constraint error.
+	seen := make(map[int64]bool, len(bps))
+	typeIDs := make([]int64, 0, len(bps))
+	for _, bp := range bps {
+		if !seen[bp.TypeID] {
+			seen[bp.TypeID] = true
+			typeIDs = append(typeIDs, bp.TypeID)
+		}
+	}
+	w.resolveTypeIDsList(ctx, typeIDs)
+
 	now := w.now()
 	for _, bp := range bps {
 		if err := w.store.UpsertBlueprint(ctx, store.UpsertBlueprintParams{
@@ -225,22 +238,13 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 	return cacheUntil, nil
 }
 
-// resolveTypeIDs ensures that every blueprint type_id for the given owner has
-// a corresponding row in eve_types, eve_groups, and eve_categories.
-// Unknown type_ids (absent from eve_types) are fetched from ESI and inserted
-// in FK order: category → group → type. Known type_ids are skipped.
+// resolveTypeIDsList ensures that every type_id in the provided slice has a
+// corresponding row in eve_types, eve_groups, and eve_categories.
+// Unknown type_ids are fetched from ESI and inserted in FK order:
+// category → group → type. Known type_ids are skipped.
 // Errors per type_id are logged and skipped; they are non-fatal so that a
 // single bad type_id does not block resolution of the rest.
-func (w *Worker) resolveTypeIDs(ctx context.Context, ownerType string, ownerID int64) {
-	typeIDs, err := w.store.ListBlueprintTypeIDsByOwner(ctx, store.ListBlueprintTypeIDsByOwnerParams{
-		OwnerType: ownerType,
-		OwnerID:   ownerID,
-	})
-	if err != nil {
-		log.Printf("sync: listing blueprint type_ids for %s %d: %v", ownerType, ownerID, err)
-		return
-	}
-
+func (w *Worker) resolveTypeIDsList(ctx context.Context, typeIDs []int64) {
 	for _, typeID := range typeIDs {
 		if ctx.Err() != nil {
 			return
@@ -283,6 +287,22 @@ func (w *Worker) resolveTypeIDs(ctx context.Context, ownerType string, ownerID i
 	}
 }
 
+// resolveTypeIDs loads type_ids already stored for the given owner and calls
+// resolveTypeIDsList to fill any gaps in eve_types.
+// Called after a successful blueprint sync as a safety net for any type_ids
+// that slipped through (e.g. interrupted resolution on a previous tick).
+func (w *Worker) resolveTypeIDs(ctx context.Context, ownerType string, ownerID int64) {
+	typeIDs, err := w.store.ListBlueprintTypeIDsByOwner(ctx, store.ListBlueprintTypeIDsByOwnerParams{
+		OwnerType: ownerType,
+		OwnerID:   ownerID,
+	})
+	if err != nil {
+		log.Printf("sync: listing blueprint type_ids for %s %d: %v", ownerType, ownerID, err)
+		return
+	}
+	w.resolveTypeIDsList(ctx, typeIDs)
+}
+
 // syncJobs fetches active/ready jobs from ESI, upserts them into the store,
 // and deletes any jobs that were previously stored but are no longer in the ESI response.
 // Returns the ESI cache expiry time on success.
@@ -319,6 +339,10 @@ func (w *Worker) syncJobs(ctx context.Context, ownerType string, ownerID int64) 
 	}
 
 	// Upsert all incoming jobs.
+	// A job whose blueprint_id is not in the blueprints table (e.g. a
+	// manufacturing job using a BPC we do not track) will fail the FK
+	// constraint. Log and skip rather than aborting the whole sync so that
+	// research jobs on tracked BPOs are still stored.
 	now := w.now()
 	for _, j := range jobs {
 		if err := w.store.UpsertJob(ctx, store.UpsertJobParams{
@@ -333,7 +357,8 @@ func (w *Worker) syncJobs(ctx context.Context, ownerType string, ownerID int64) 
 			EndDate:     j.EndDate,
 			UpdatedAt:   now,
 		}); err != nil {
-			return cacheUntil, fmt.Errorf("upserting job %d: %w", j.JobID, err)
+			log.Printf("sync: jobs %s %d: upserting job %d: %v", ownerType, ownerID, j.JobID, err)
+			continue
 		}
 	}
 

@@ -182,6 +182,10 @@ func TestResolveTypeIDs_CalledAfterBlueprintSync(t *testing.T) {
 	typeIDsResolved := false
 
 	q := &mockQuerier{
+		// Pre-upsert resolveTypeIDsList checks eve_types; return "known" so no ESI fetch is needed.
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
 		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
 		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
 		listBlueprintTypeIDsByOwnerFunc: func(_ store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error) {

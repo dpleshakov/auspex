@@ -74,6 +74,10 @@ func TestSyncBlueprints_UpsertsAll(t *testing.T) {
 	var syncStateArg store.UpsertSyncStateParams
 
 	q := &mockQuerier{
+		// Pre-upsert resolveTypeIDsList checks eve_types; return "known" so no ESI fetch is needed.
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
 		upsertBlueprintFunc: func(arg store.UpsertBlueprintParams) error {
 			upsertedBPs = append(upsertedBPs, arg)
 			return nil
@@ -340,5 +344,62 @@ func TestSyncJobs_NoStaleJobs(t *testing.T) {
 
 	if deleteCallCount != 0 {
 		t.Errorf("expected no deletions when no stale jobs, got %d", deleteCallCount)
+	}
+}
+
+// --- TestSyncJobs_UpsertError_ContinuesOtherJobs ---
+// Verifies that a UpsertJob FK error (e.g. manufacturing job whose BPC is not
+// in the blueprints table) does not abort the sync — remaining jobs are still
+// upserted and sync_state is updated.
+func TestSyncJobs_UpsertError_ContinuesOtherJobs(t *testing.T) {
+	const charID int64 = 7
+	expiry := time.Now().Add(5 * time.Minute).Truncate(time.Second)
+	start := time.Now().Add(-time.Hour).UTC().Truncate(time.Second)
+	end := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
+
+	incomingJobs := []esi.Job{
+		// Job 301: blueprint 9999 not in blueprints table → UpsertJob fails.
+		{JobID: 301, BlueprintID: 9999, InstallerID: charID, Activity: "manufacturing", Status: "active", StartDate: start, EndDate: end},
+		// Job 302: blueprint 1001 in blueprints table → succeeds.
+		{JobID: 302, BlueprintID: 1001, InstallerID: charID, Activity: "me_research", Status: "active", StartDate: start, EndDate: end},
+	}
+
+	var upsertedJobIDs []int64
+	syncStateUpdated := false
+
+	q := &mockQuerier{
+		listJobIDsByOwnerFunc: func(_ store.ListJobIDsByOwnerParams) ([]int64, error) {
+			return nil, nil
+		},
+		upsertJobFunc: func(arg store.UpsertJobParams) error {
+			if arg.ID == 301 {
+				return errors.New("FOREIGN KEY constraint failed")
+			}
+			upsertedJobIDs = append(upsertedJobIDs, arg.ID)
+			return nil
+		},
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error {
+			syncStateUpdated = true
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		charJobsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Job, time.Time, error) {
+			return incomingJobs, expiry, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCharacter, charID, endpointJobs)
+
+	if len(upsertedJobIDs) != 1 {
+		t.Fatalf("expected 1 successful upsert, got %d: %v", len(upsertedJobIDs), upsertedJobIDs)
+	}
+	if upsertedJobIDs[0] != 302 {
+		t.Errorf("expected job 302 to succeed, got %d", upsertedJobIDs[0])
+	}
+	if !syncStateUpdated {
+		t.Error("sync_state must be updated even when some job upserts are skipped")
 	}
 }
