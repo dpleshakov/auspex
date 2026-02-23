@@ -435,6 +435,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ## Layer 7 — Frontend
 
 ### TASK-20 Vite + React scaffold
+**Status:** ✅ Done — commit TBD
+
 **Description:** Initialize React + Vite project in `cmd/auspex/web/`. Configure Vite proxy for `/api` and `/auth` to backend in dev mode. Implement `src/api/client.js` with all fetch functions.
 
 **Definition of done:**
