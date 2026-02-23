@@ -199,6 +199,20 @@ AI helps write the README, API documentation, and startup/deployment instruction
 
 ---
 
+### Language Standard
+
+**All code must be in English.** This applies without exception to:
+- Identifiers: variable names, function names, type names, constants, package names
+- Comments (both inline and doc comments)
+- Commit messages
+- Documentation files (`*.md`)
+- SQL schema, table names, column names
+- API field names, error messages, log messages
+
+The only permitted exceptions are EVE Online proper nouns (ship names, item names, etc.) that appear as data values, not as identifiers.
+
+---
+
 ### Core Principles for Working with AI
 
 **Context is everything.** AI does not remember past sessions. Documents from previous phases are your shared memory. Pass the relevant files at the start of each conversation. `tasks.md` with current task statuses is a required file at the start of every Phase 7 conversation: AI immediately sees what is done, what is not, and avoids revisiting already-resolved questions.
