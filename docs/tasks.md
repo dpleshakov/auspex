@@ -300,6 +300,8 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-15 `api` blueprints + summary
+**Status:** ✅ Done — commit TBD
+
 **Description:** Blueprint library endpoint with filters and summary endpoint.
 
 **Endpoints:**
