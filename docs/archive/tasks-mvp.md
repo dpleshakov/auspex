@@ -1,8 +1,8 @@
-# Auspex — tasks.md
+# Auspex — tasks-mvp.md
 
 > Phase 6: Task Breakdown
 > Date: 21.02.2026
-> Status: Draft
+> Status: Archived
 
 ---
 
