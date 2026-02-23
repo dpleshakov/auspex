@@ -14,6 +14,15 @@ A local desktop tool for EVE Online industry players who manage multiple manufac
 - Manual force-refresh with live polling feedback
 - Single binary — no Docker, no PostgreSQL, no Redis required
 
+## Known Limitations
+
+- **Corporation support is not yet available via the UI.** The backend endpoint `POST /api/corporations` exists but there is no frontend for it — tracked in [docs/tasks-backlog.md](docs/tasks-backlog.md).
+- Only the first page of ESI results is fetched — large corporation BPO libraries (>1000 items) will be truncated silently.
+- Location IDs are displayed as raw numbers; human-readable station/structure names are not yet implemented.
+- Free research slots count is always 0 (requires per-character skill data from ESI, not yet implemented).
+
+See [docs/tech-debt.md](docs/tech-debt.md) and [docs/tasks-backlog.md](docs/tasks-backlog.md) for the full list of known issues and deferred decisions.
+
 ## Prerequisites
 
 | Tool | Version | Notes |
@@ -94,8 +103,6 @@ http://localhost:8080/auth/eve/login
 Complete the EVE SSO flow. After a successful login, Auspex immediately triggers a sync and redirects you to the dashboard.
 
 Repeat for each character.
-
-> **Corporation support is not yet available via the UI.** The backend endpoint `POST /api/corporations` exists but there is no frontend for it — this is a known bug tracked in [docs/tasks-backlog.md](docs/tasks-backlog.md).
 
 ## Configuration
 
@@ -182,14 +189,6 @@ See [docs/project-structure.md](docs/project-structure.md) for a detailed descri
 - **Lazy universe resolution:** `eve_types`, `eve_groups`, and `eve_categories` are populated on first encounter and never re-fetched.
 
 See [docs/architecture.md](docs/architecture.md) for the full architecture description.
-
-## Known Limitations (MVP)
-
-- Only the first page of ESI results is fetched — large corporation BPO libraries (>1000 items) will be truncated silently.
-- Location IDs are displayed as raw numbers; human-readable station/structure names are a post-MVP feature.
-- Free research slots count is always 0 (requires per-character skill data from ESI, not implemented in MVP).
-
-See [docs/tech-debt.md](docs/tech-debt.md) for the full list of known issues and deferred decisions.
 
 ## License
 
