@@ -8,7 +8,6 @@
 # The directory itself (with .gitkeep) is committed so //go:embed compiles without running npm first.
 cmd/auspex/web/dist/*
 !cmd/auspex/web/dist/.gitkeep
-!cmd/auspex/web/dist/debug.html
 
 # Frontend dependencies
 cmd/auspex/web/node_modules/
