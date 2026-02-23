@@ -500,7 +500,7 @@ Total: 26 tasks across 7 layers. Order is bottom-up: each layer depends on the p
 ---
 
 ### TASK-24 `BlueprintTable` sorting + filtering
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit e87a1fd
 
 **Description:** Add sorting and filtering to the blueprint table.
 
