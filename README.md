@@ -65,19 +65,13 @@ esi:
 
 ### 3. Build
 
-**macOS / Linux:**
-
 ```bash
-scripts/build.sh
+make build
 ```
 
-**Windows:**
+Runs `npm run build` → `sqlc generate` → `go build` in the correct order and produces an `auspex` (or `auspex.exe`) binary in the project root.
 
-```cmd
-scripts\build.cmd
-```
-
-The build script runs `npm run build` → `sqlc generate` → `go build` in the correct order and produces an `auspex` (or `auspex.exe`) binary in the project root.
+> **Windows:** `make` is not included with Windows by default and must be installed separately.
 
 ### 4. Run
 
@@ -157,7 +151,7 @@ Run this after any change to `internal/db/migrations/` or `internal/db/queries/`
 
 ### Build order
 
-The correct build order is enforced by the build scripts:
+The correct build order is enforced by the Makefile:
 
 1. `npm run build` — produces `cmd/auspex/web/dist/` (embedded into the binary)
 2. `sqlc generate` — regenerates `internal/store/` from SQL queries
@@ -177,7 +171,7 @@ internal/
   sync/              # Background worker; coordinates esi + store
   api/               # Chi router and HTTP handlers
 docs/                # Architecture, requirements, task breakdown, tech debt
-scripts/             # build.sh and build.cmd
+Makefile             # build, test, lint, clean targets
 ```
 
 See [docs/project-structure.md](docs/project-structure.md) for a detailed description of every file.

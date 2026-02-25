@@ -69,11 +69,9 @@ auspex/
 │   │   └── .gitkeep
 │   └── sync/
 │       └── worker.go
-├── scripts/
-│   ├── build.cmd
-│   └── build.sh
 ├── .gitignore
 ├── go.mod
+├── Makefile
 └── sqlc.yaml
 ```
 
@@ -89,6 +87,7 @@ auspex/
 | `sqlc.yaml` | sqlc v2 config: reads schema from `internal/db/migrations/`, queries from `internal/db/queries/`, outputs typed Go code to `internal/store/` |
 | `auspex.example.yaml` | **Created in Phase 7** when `internal/config/` is implemented. Field names are determined by the `Config` struct. The real `auspex.yaml` (with credentials) is gitignored. |
 | `.gitignore` | Ignores binary, `web/dist/*` (except `.gitkeep`), `node_modules/`, `*.db`, `auspex.yaml` |
+| `Makefile` | Build automation: `build`, `frontend`, `sqlc`, `test`, `lint`, `check`, `clean`, `clean-all` targets. On Windows requires `make` to be installed separately. |
 
 ---
 
@@ -209,11 +208,21 @@ Chi router and HTTP handlers. Never calls ESI directly — reads only from `stor
 
 ---
 
-### `scripts/`
+### `Makefile`
 
-| File | Purpose |
-|------|---------|
-| `build.sh` | Full build for macOS/Linux: `npm install` → `npm run build` → `sqlc generate` → `go build -o auspex ./cmd/auspex/` |
-| `build.cmd` | Same for Windows CMD |
+Top-level build automation. Targets:
+
+| Target | Action |
+|--------|--------|
+| `build` | Full build: `frontend` → `sqlc` → `go build -o auspex ./cmd/auspex/` |
+| `frontend` | `npm install && npm run build` inside `cmd/auspex/web/` |
+| `sqlc` | `sqlc generate` |
+| `test` | `go test ./...` |
+| `lint` | `lint-go` + `lint-js` |
+| `lint-go` | `go vet ./...` + `golangci-lint run` |
+| `lint-js` | `npm audit --audit-level=high` |
+| `check` | `lint` + `test` + `build` (run before pushing) |
+| `clean` | Removes binary and `web/dist/*` (keeps `.gitkeep`) |
+| `clean-all` | `clean` + removes `auspex.db` |
 
 **Build order matters:** the frontend must be built before `go build` so that `web/dist/` contains real files for `//go:embed`. `sqlc generate` must run before `go build` so that `internal/store/` contains generated code.
