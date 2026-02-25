@@ -292,8 +292,7 @@ Once implemented, the standard workflow will be:
 
 ```bash
 # Full build (frontend → sqlc → Go binary)
-scripts/build.sh      # macOS/Linux
-scripts/build.cmd     # Windows
+make build            # macOS/Linux; on Windows requires make to be installed separately
 
 # Frontend only (in cmd/auspex/web/)
 npm install
@@ -310,7 +309,7 @@ go test ./internal/esi/...
 go test ./internal/sync/... -run TestSyncWorker
 ```
 
-Build order matters: `npm run build` → `sqlc generate` → `go build`. The build scripts enforce this. `sqlc generate` must be re-run after any change to `internal/db/migrations/` or `internal/db/queries/`.
+Build order matters: `npm run build` → `sqlc generate` → `go build`. The Makefile enforces this. `sqlc generate` must be re-run after any change to `internal/db/migrations/` or `internal/db/queries/`.
 
 ## Architecture
 

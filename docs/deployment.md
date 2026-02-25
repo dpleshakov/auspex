@@ -23,27 +23,19 @@ No prerequisites. Download the binary and run it.
 
 ## Building from Source
 
-Build order is critical and enforced by the build scripts:
+Build order is critical and enforced by the Makefile:
 
 1. **`npm run build`** — compiles the React frontend into `cmd/auspex/web/dist/`
 2. **`sqlc generate`** — regenerates `internal/store/` from SQL query files
 3. **`go build`** — compiles the Go binary with the embedded frontend
 
-### Using the build scripts (recommended)
-
-**macOS / Linux:**
+### Using the Makefile (recommended)
 
 ```bash
-scripts/build.sh
+make build
 ```
 
-**Windows (CMD):**
-
-```cmd
-scripts\build.cmd
-```
-
-Both scripts fail with a clear error message if any step fails or if `web/dist/index.html` is missing after the frontend build.
+> **Windows:** `make` is not included with Windows by default and must be installed separately.
 
 ### Manual build
 
@@ -159,7 +151,7 @@ On `SIGINT` or `SIGTERM` (Ctrl+C):
 ## Updating
 
 1. Pull the latest source
-2. Run the build script again — it handles all steps in the correct order
+2. Run `make build` again — it handles all steps in the correct order
 3. Replace the binary
 4. Restart
 
@@ -186,7 +178,7 @@ The config file was not found, or `esi.client_id` is empty. Check the file path 
 The SQLite database could not be opened. Check that the directory specified by `db_path` exists and is writable.
 
 **`preparing static files: ...`**
-The binary was compiled without running `npm run build` first. The `web/dist/` directory was empty. Rebuild using `scripts/build.sh` or `scripts/build.cmd`.
+The binary was compiled without running `npm run build` first. The `web/dist/` directory was empty. Rebuild using `make build`.
 
 **OAuth callback fails with "invalid or expired OAuth state"**
 The browser completed the OAuth flow in a different server session (e.g. after a restart). Restart the login flow from `/auth/eve/login`.
