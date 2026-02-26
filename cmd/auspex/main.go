@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -31,10 +30,7 @@ import (
 var staticFiles embed.FS
 
 func main() {
-	configPath := flag.String("config", "auspex.yaml", "path to config file")
-	flag.Parse()
-
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
@@ -43,7 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("db: %v", err)
 	}
-	defer database.Close()
+	defer database.Close() //nolint:errcheck // Close on shutdown, error is inconsequential
 
 	queries := store.New(database)
 

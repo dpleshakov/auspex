@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -104,13 +103,13 @@ func TestHandleCallback_StateConsumedOnce(t *testing.T) {
 			"expires_in":    1200,
 		})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	})
 	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
 		err := json.NewEncoder(w).Encode(verifyResponse{CharacterID: 1, CharacterName: "X"})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	})
 	ts := httptest.NewServer(mux)
@@ -159,7 +158,7 @@ func TestCallVerify_ParsesResponse(t *testing.T) {
 			CharacterName: "TinkerBear",
 		})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	}))
 	defer ts.Close()
@@ -203,7 +202,7 @@ func TestCallVerify_ZeroCharacterID(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		err := json.NewEncoder(w).Encode(verifyResponse{CharacterID: 0, CharacterName: ""})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	}))
 	defer ts.Close()
@@ -232,7 +231,7 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 			"expires_in":    3600,
 		})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	})
 	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
@@ -242,7 +241,7 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 			CharacterName: "BearPilot",
 		})
 		if err != nil {
-			log.Fatalf("encode: %v", err)
+			t.Fatalf("encode: %v", err)
 		}
 	})
 	ts := httptest.NewServer(mux)
