@@ -1,5 +1,15 @@
 version: "2"
 
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/dpleshakov/auspex
+
 linters:
   enable:
     - errcheck
@@ -12,44 +22,39 @@ linters:
     - misspell
     - whitespace
 
-formatters:
-  enable:
-    - gofmt
-    - goimports
+  settings:
+    gosec:
+      excludes:
+        - G404
 
-linters-settings:
-  gosec:
-    excludes:
-      - G404
+    revive:
+      rules:
+        - name: exported
+          arguments:
+            - "checkPrivateReceivers"
 
-  revive:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+      disabled-checks:
+        - commentedOutCode
+
+    misspell:
+      locale: US
+
+  exclusions:
     rules:
-      - name: exported
-        arguments:
-          - "checkPrivateReceivers"
+      - path: "_test\\.go"
+        linters:
+          - gosec
+          - gocritic
 
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-    disabled-checks:
-      - commentedOutCode
+      - path: "internal/store/"
+        linters:
+          - all
 
-  misspell:
-    locale: US
-
-formatters-settings:
-  goimports:
-    local-prefixes:
-      - github.com/dpleshakov/auspex
-
-issues:
-  exclude-rules:
-    - path: "_test\\.go"
-      linters:
-        - gosec
-        - gocritic
-
-    - path: "internal/store/"
-      linters:
-        - all
+      - linters:
+          - revive
+        path: internal/api/
+        text: "avoid meaningless package names"
