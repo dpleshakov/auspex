@@ -17,7 +17,7 @@ import (
 func TestGetCorporations_ReturnsJSON(t *testing.T) {
 	createdAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	mock := &mockQuerier{
-		ListCorporationsFn: func(ctx context.Context) ([]store.ListCorporationsRow, error) {
+		ListCorporationsFn: func(_ context.Context) ([]store.ListCorporationsRow, error) {
 			return []store.ListCorporationsRow{
 				{ID: 100, Name: "Goonswarm", DelegateID: 1, DelegateName: "Alpha", CreatedAt: createdAt},
 			}, nil
@@ -25,7 +25,7 @@ func TestGetCorporations_ReturnsJSON(t *testing.T) {
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/corporations", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corporations", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -49,13 +49,13 @@ func TestGetCorporations_ReturnsJSON(t *testing.T) {
 
 func TestGetCorporations_DBError(t *testing.T) {
 	mock := &mockQuerier{
-		ListCorporationsFn: func(ctx context.Context) ([]store.ListCorporationsRow, error) {
+		ListCorporationsFn: func(_ context.Context) ([]store.ListCorporationsRow, error) {
 			return nil, errors.New("db error")
 		},
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/corporations", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/corporations", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -67,7 +67,7 @@ func TestGetCorporations_DBError(t *testing.T) {
 func TestAddCorporation_OK(t *testing.T) {
 	var inserted store.InsertCorporationParams
 	mock := &mockQuerier{
-		InsertCorporationFn: func(ctx context.Context, arg store.InsertCorporationParams) error {
+		InsertCorporationFn: func(_ context.Context, arg store.InsertCorporationParams) error {
 			inserted = arg
 			return nil
 		},
@@ -90,7 +90,7 @@ func TestAddCorporation_OK(t *testing.T) {
 
 func TestAddCorporation_InvalidDelegate(t *testing.T) {
 	mock := &mockQuerier{
-		GetCharacterFn: func(ctx context.Context, id int64) (store.Character, error) {
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
 			return store.Character{}, sql.ErrNoRows
 		},
 	}
@@ -147,26 +147,26 @@ func TestAddCorporation_InvalidBody(t *testing.T) {
 func TestDeleteCorporation_OK(t *testing.T) {
 	var calls []string
 	mock := &mockQuerier{
-		DeleteBlueprintsByOwnerFn: func(ctx context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
+		DeleteBlueprintsByOwnerFn: func(_ context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
 			calls = append(calls, "blueprints:"+arg.OwnerType)
 			return nil
 		},
-		DeleteJobsByOwnerFn: func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error {
+		DeleteJobsByOwnerFn: func(_ context.Context, arg store.DeleteJobsByOwnerParams) error {
 			calls = append(calls, "jobs:"+arg.OwnerType)
 			return nil
 		},
-		DeleteSyncStateByOwnerFn: func(ctx context.Context, arg store.DeleteSyncStateByOwnerParams) error {
+		DeleteSyncStateByOwnerFn: func(_ context.Context, arg store.DeleteSyncStateByOwnerParams) error {
 			calls = append(calls, "sync_state:"+arg.OwnerType)
 			return nil
 		},
-		DeleteCorporationFn: func(ctx context.Context, id int64) error {
+		DeleteCorporationFn: func(_ context.Context, _ int64) error {
 			calls = append(calls, "corporation")
 			return nil
 		},
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -187,7 +187,7 @@ func TestDeleteCorporation_OK(t *testing.T) {
 func TestDeleteCorporation_InvalidID(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/notanumber", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/notanumber", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

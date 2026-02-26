@@ -32,7 +32,7 @@ func (h *spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f, err := h.root.Open(path)
 	if err == nil {
 		stat, statErr := f.Stat()
-		f.Close()
+		_ = f.Close()
 		if statErr == nil && !stat.IsDir() {
 			h.server.ServeHTTP(w, r)
 			return

@@ -18,7 +18,7 @@ type syncStatusItemJSON struct {
 //
 //	POST /api/sync         (sends force-refresh signal to the sync worker via channel)
 //	GET  /api/sync/status
-func (r *router) handlePostSync(w http.ResponseWriter, req *http.Request) {
+func (r *router) handlePostSync(w http.ResponseWriter, _ *http.Request) {
 	r.worker.ForceRefresh()
 	w.WriteHeader(http.StatusAccepted)
 }

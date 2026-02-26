@@ -15,7 +15,7 @@ import (
 func TestGetCharacters_ReturnsJSON(t *testing.T) {
 	createdAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	mock := &mockQuerier{
-		ListCharactersFn: func(ctx context.Context) ([]store.Character, error) {
+		ListCharactersFn: func(_ context.Context) ([]store.Character, error) {
 			return []store.Character{
 				{ID: 1, Name: "Alpha", CreatedAt: createdAt},
 				{ID: 2, Name: "Beta", CreatedAt: createdAt},
@@ -24,7 +24,7 @@ func TestGetCharacters_ReturnsJSON(t *testing.T) {
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/characters", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -52,7 +52,7 @@ func TestGetCharacters_ReturnsJSON(t *testing.T) {
 func TestGetCharacters_EmptyList(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/characters", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -71,13 +71,13 @@ func TestGetCharacters_EmptyList(t *testing.T) {
 
 func TestGetCharacters_DBError(t *testing.T) {
 	mock := &mockQuerier{
-		ListCharactersFn: func(ctx context.Context) ([]store.Character, error) {
+		ListCharactersFn: func(_ context.Context) ([]store.Character, error) {
 			return nil, errors.New("db error")
 		},
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/characters", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -89,14 +89,14 @@ func TestGetCharacters_DBError(t *testing.T) {
 func TestDeleteCharacter_OK(t *testing.T) {
 	var gotDeletedID int64
 	mock := &mockQuerier{
-		DeleteCharacterFn: func(ctx context.Context, id int64) error {
+		DeleteCharacterFn: func(_ context.Context, id int64) error {
 			gotDeletedID = id
 			return nil
 		},
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -111,26 +111,26 @@ func TestDeleteCharacter_OK(t *testing.T) {
 func TestDeleteCharacter_CascadeOrder(t *testing.T) {
 	var calls []string
 	mock := &mockQuerier{
-		DeleteBlueprintsByOwnerFn: func(ctx context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
+		DeleteBlueprintsByOwnerFn: func(_ context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
 			calls = append(calls, "blueprints:"+arg.OwnerType)
 			return nil
 		},
-		DeleteJobsByOwnerFn: func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error {
+		DeleteJobsByOwnerFn: func(_ context.Context, arg store.DeleteJobsByOwnerParams) error {
 			calls = append(calls, "jobs:"+arg.OwnerType)
 			return nil
 		},
-		DeleteSyncStateByOwnerFn: func(ctx context.Context, arg store.DeleteSyncStateByOwnerParams) error {
+		DeleteSyncStateByOwnerFn: func(_ context.Context, arg store.DeleteSyncStateByOwnerParams) error {
 			calls = append(calls, "sync_state:"+arg.OwnerType)
 			return nil
 		},
-		DeleteCharacterFn: func(ctx context.Context, id int64) error {
+		DeleteCharacterFn: func(_ context.Context, _ int64) error {
 			calls = append(calls, "character")
 			return nil
 		},
 	}
 	mux := NewRouter(mock, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/characters/7", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/7", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -151,7 +151,7 @@ func TestDeleteCharacter_CascadeOrder(t *testing.T) {
 func TestDeleteCharacter_InvalidID(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodDelete, "/api/characters/notanumber", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/notanumber", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

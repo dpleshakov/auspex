@@ -12,8 +12,8 @@ import (
 
 // mockAuthProvider implements AuthProvider for tests.
 type mockAuthProvider struct {
-	GenerateAuthURLFn  func() (string, error)
-	HandleCallbackFn   func(ctx context.Context, code, state string) (int64, error)
+	GenerateAuthURLFn func() (string, error)
+	HandleCallbackFn  func(ctx context.Context, code, state string) (int64, error)
 }
 
 func (m *mockAuthProvider) GenerateAuthURL() (string, error) {
@@ -40,7 +40,7 @@ func TestHandleLogin_RedirectsToEVESSO(t *testing.T) {
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/login", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/login", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -59,7 +59,7 @@ func TestHandleLogin_500WhenGenerateFails(t *testing.T) {
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/login", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/login", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -76,12 +76,12 @@ func TestHandleLogin_500WhenGenerateFails(t *testing.T) {
 func TestHandleCallback_ValidStateRedirectsToRoot(t *testing.T) {
 	worker := &mockWorker{}
 	mux := NewRouter(&mockQuerier{}, worker, &mockAuthProvider{
-		HandleCallbackFn: func(ctx context.Context, code, state string) (int64, error) {
+		HandleCallbackFn: func(_ context.Context, _, _ string) (int64, error) {
 			return 12345, nil
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=mystate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=mystate", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -95,12 +95,12 @@ func TestHandleCallback_ValidStateRedirectsToRoot(t *testing.T) {
 
 func TestHandleCallback_InvalidStateReturns400(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, &mockAuthProvider{
-		HandleCallbackFn: func(ctx context.Context, code, state string) (int64, error) {
+		HandleCallbackFn: func(_ context.Context, _, _ string) (int64, error) {
 			return 0, auth.ErrInvalidState
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=badstate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=badstate", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -117,7 +117,7 @@ func TestHandleCallback_MissingParams_Returns400(t *testing.T) {
 		"/auth/eve/callback?code=x",
 		"/auth/eve/callback?state=y",
 	} {
-		req := httptest.NewRequest(http.MethodGet, url, nil)
+		req := httptest.NewRequest(http.MethodGet, url, http.NoBody)
 		rr := httptest.NewRecorder()
 		mux.ServeHTTP(rr, req)
 
@@ -129,12 +129,12 @@ func TestHandleCallback_MissingParams_Returns400(t *testing.T) {
 
 func TestHandleCallback_CallbackError_Returns500(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, &mockAuthProvider{
-		HandleCallbackFn: func(ctx context.Context, code, state string) (int64, error) {
+		HandleCallbackFn: func(_ context.Context, _, _ string) (int64, error) {
 			return 0, errors.New("token exchange failed")
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=x&state=y", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=x&state=y", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -146,12 +146,12 @@ func TestHandleCallback_CallbackError_Returns500(t *testing.T) {
 func TestHandleCallback_SuccessTriggersForceRefresh(t *testing.T) {
 	worker := &mockWorker{}
 	mux := NewRouter(&mockQuerier{}, worker, &mockAuthProvider{
-		HandleCallbackFn: func(ctx context.Context, code, state string) (int64, error) {
+		HandleCallbackFn: func(_ context.Context, _, _ string) (int64, error) {
 			return 12345, nil
 		},
 	}, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=mystate", nil)
+	req := httptest.NewRequest(http.MethodGet, "/auth/eve/callback?code=mycode&state=mystate", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
