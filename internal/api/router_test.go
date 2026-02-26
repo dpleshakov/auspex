@@ -22,12 +22,12 @@ func testFS() fstest.MapFS {
 // --- jsonContentType middleware ---
 
 func TestJSONContentType(t *testing.T) {
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	handler := jsonContentType(next)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -39,12 +39,12 @@ func TestJSONContentType(t *testing.T) {
 // --- CORS middleware ---
 
 func TestCORSMiddleware_SetsHeaders(t *testing.T) {
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	handler := corsMiddleware(next)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -54,13 +54,13 @@ func TestCORSMiddleware_SetsHeaders(t *testing.T) {
 }
 
 func TestCORSMiddleware_Options(t *testing.T) {
-	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Should not be called for OPTIONS.
 		w.WriteHeader(http.StatusOK)
 	})
 	handler := corsMiddleware(next)
 
-	req := httptest.NewRequest(http.MethodOptions, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodOptions, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
 
@@ -75,11 +75,11 @@ func TestPanicRecovery(t *testing.T) {
 	// Verify that middleware.Recoverer (used in NewRouter) turns panics into 500s.
 	mux := chi.NewRouter()
 	mux.Use(middleware.Recoverer)
-	mux.Get("/boom", func(w http.ResponseWriter, r *http.Request) {
+	mux.Get("/boom", func(_ http.ResponseWriter, _ *http.Request) {
 		panic("test panic")
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/boom", nil)
+	req := httptest.NewRequest(http.MethodGet, "/boom", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -93,7 +93,7 @@ func TestPanicRecovery(t *testing.T) {
 func TestRouter_APIContentType(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/characters", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -107,7 +107,7 @@ func TestRouter_APIContentType(t *testing.T) {
 func TestRouter_StaticKnownFile(t *testing.T) {
 	mux := NewRouter(nil, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/assets/app.js", nil)
+	req := httptest.NewRequest(http.MethodGet, "/assets/app.js", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -120,7 +120,7 @@ func TestRouter_SPAFallback(t *testing.T) {
 	mux := NewRouter(nil, nil, nil, testFS())
 
 	// /some/spa/route does not exist as a file → must return index.html.
-	req := httptest.NewRequest(http.MethodGet, "/some/spa/route", nil)
+	req := httptest.NewRequest(http.MethodGet, "/some/spa/route", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -135,7 +135,7 @@ func TestRouter_SPAFallback(t *testing.T) {
 func TestRouter_IndexHTML(t *testing.T) {
 	mux := NewRouter(nil, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

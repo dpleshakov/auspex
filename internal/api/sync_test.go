@@ -27,7 +27,7 @@ func TestPostSync_Returns202(t *testing.T) {
 	worker := &mockWorker{}
 	mux := NewRouter(&mockQuerier{}, worker, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodPost, "/api/sync", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/sync", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -40,7 +40,7 @@ func TestPostSync_CallsForceRefresh(t *testing.T) {
 	worker := &mockWorker{}
 	mux := NewRouter(&mockQuerier{}, worker, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodPost, "/api/sync", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/sync", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -54,7 +54,7 @@ func TestPostSync_CallsForceRefresh(t *testing.T) {
 func TestGetSyncStatus_Empty(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -75,7 +75,7 @@ func TestGetSyncStatus_IncludesOwnerNames(t *testing.T) {
 	cacheUntil := time.Date(2026, 2, 20, 11, 0, 0, 0, time.UTC)
 
 	mux := NewRouter(&mockQuerier{
-		ListSyncStatusFn: func(ctx context.Context) ([]store.ListSyncStatusRow, error) {
+		ListSyncStatusFn: func(_ context.Context) ([]store.ListSyncStatusRow, error) {
 			return []store.ListSyncStatusRow{
 				{
 					OwnerType:  "character",
@@ -97,7 +97,7 @@ func TestGetSyncStatus_IncludesOwnerNames(t *testing.T) {
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -122,12 +122,12 @@ func TestGetSyncStatus_IncludesOwnerNames(t *testing.T) {
 
 func TestGetSyncStatus_DBError(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		ListSyncStatusFn: func(ctx context.Context) ([]store.ListSyncStatusRow, error) {
+		ListSyncStatusFn: func(_ context.Context) ([]store.ListSyncStatusRow, error) {
 			return nil, errors.New("db error")
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/sync/status", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

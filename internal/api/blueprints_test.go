@@ -18,7 +18,7 @@ import (
 func TestGetBlueprints_Empty(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -36,7 +36,7 @@ func TestGetBlueprints_Empty(t *testing.T) {
 
 func TestGetBlueprints_NullJobWhenNoJob(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		ListBlueprintsFn: func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
+		ListBlueprintsFn: func(_ context.Context, _ store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 			return []store.ListBlueprintsRow{
 				{
 					ID: 1, OwnerType: "character", OwnerID: 100,
@@ -49,7 +49,7 @@ func TestGetBlueprints_NullJobWhenNoJob(t *testing.T) {
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -57,7 +57,9 @@ func TestGetBlueprints_NullJobWhenNoJob(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var got []map[string]any
-	json.NewDecoder(rr.Body).Decode(&got)
+	if err := json.NewDecoder(rr.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
 	if len(got) != 1 {
 		t.Fatalf("expected 1 blueprint, got %d", len(got))
 	}
@@ -71,7 +73,7 @@ func TestGetBlueprints_NonNullJobWhenJobExists(t *testing.T) {
 	endDate := time.Date(2026, 2, 2, 0, 0, 0, 0, time.UTC)
 
 	mux := NewRouter(&mockQuerier{
-		ListBlueprintsFn: func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
+		ListBlueprintsFn: func(_ context.Context, _ store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 			return []store.ListBlueprintsRow{
 				{
 					ID: 1, OwnerType: "character", OwnerID: 100,
@@ -88,7 +90,7 @@ func TestGetBlueprints_NonNullJobWhenJobExists(t *testing.T) {
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -96,7 +98,9 @@ func TestGetBlueprints_NonNullJobWhenJobExists(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var got []map[string]any
-	json.NewDecoder(rr.Body).Decode(&got)
+	if err := json.NewDecoder(rr.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
 	if len(got) != 1 {
 		t.Fatalf("expected 1 blueprint, got %d", len(got))
 	}
@@ -119,13 +123,13 @@ func TestGetBlueprints_NonNullJobWhenJobExists(t *testing.T) {
 func TestGetBlueprints_FilterOwnerType(t *testing.T) {
 	var captured store.ListBlueprintsParams
 	mux := NewRouter(&mockQuerier{
-		ListBlueprintsFn: func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
+		ListBlueprintsFn: func(_ context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 			captured = arg
 			return nil, nil
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?owner_type=corporation", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?owner_type=corporation", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -140,13 +144,13 @@ func TestGetBlueprints_FilterOwnerType(t *testing.T) {
 func TestGetBlueprints_FilterStatus(t *testing.T) {
 	var captured store.ListBlueprintsParams
 	mux := NewRouter(&mockQuerier{
-		ListBlueprintsFn: func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
+		ListBlueprintsFn: func(_ context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 			captured = arg
 			return nil, nil
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?status=idle", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?status=idle", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -161,7 +165,7 @@ func TestGetBlueprints_FilterStatus(t *testing.T) {
 func TestGetBlueprints_InvalidOwnerID(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?owner_id=notanumber", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?owner_id=notanumber", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -173,7 +177,7 @@ func TestGetBlueprints_InvalidOwnerID(t *testing.T) {
 func TestGetBlueprints_InvalidCategoryID(t *testing.T) {
 	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?category_id=xyz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints?category_id=xyz", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -184,12 +188,12 @@ func TestGetBlueprints_InvalidCategoryID(t *testing.T) {
 
 func TestGetBlueprints_DBError(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		ListBlueprintsFn: func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
+		ListBlueprintsFn: func(_ context.Context, _ store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error) {
 			return nil, errors.New("db error")
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/blueprints", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -202,13 +206,13 @@ func TestGetBlueprints_DBError(t *testing.T) {
 
 func TestGetJobsSummary_Counts(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		CountIdleBlueprintsFn:    func(ctx context.Context) (int64, error) { return 5, nil },
-		CountOverdueJobsFn:       func(ctx context.Context) (int64, error) { return 3, nil },
-		CountCompletingTodayFn:   func(ctx context.Context) (int64, error) { return 1, nil },
-		ListCharacterSlotUsageFn: func(ctx context.Context) ([]store.ListCharacterSlotUsageRow, error) { return nil, nil },
+		CountIdleBlueprintsFn:    func(_ context.Context) (int64, error) { return 5, nil },
+		CountOverdueJobsFn:       func(_ context.Context) (int64, error) { return 3, nil },
+		CountCompletingTodayFn:   func(_ context.Context) (int64, error) { return 1, nil },
+		ListCharacterSlotUsageFn: func(_ context.Context) ([]store.ListCharacterSlotUsageRow, error) { return nil, nil },
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -232,7 +236,7 @@ func TestGetJobsSummary_Counts(t *testing.T) {
 
 func TestGetJobsSummary_IncludesCharacters(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		ListCharacterSlotUsageFn: func(ctx context.Context) ([]store.ListCharacterSlotUsageRow, error) {
+		ListCharacterSlotUsageFn: func(_ context.Context) ([]store.ListCharacterSlotUsageRow, error) {
 			return []store.ListCharacterSlotUsageRow{
 				{ID: 1, Name: "Alice", UsedSlots: 3},
 				{ID: 2, Name: "Bob", UsedSlots: 0},
@@ -240,7 +244,7 @@ func TestGetJobsSummary_IncludesCharacters(t *testing.T) {
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -248,7 +252,9 @@ func TestGetJobsSummary_IncludesCharacters(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}
 	var got summaryJSON
-	json.NewDecoder(rr.Body).Decode(&got)
+	if err := json.NewDecoder(rr.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
 	if len(got.Characters) != 2 {
 		t.Fatalf("expected 2 characters, got %d", len(got.Characters))
 	}
@@ -262,12 +268,12 @@ func TestGetJobsSummary_IncludesCharacters(t *testing.T) {
 
 func TestGetJobsSummary_DBErrorOnIdle(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		CountIdleBlueprintsFn: func(ctx context.Context) (int64, error) {
+		CountIdleBlueprintsFn: func(_ context.Context) (int64, error) {
 			return 0, errors.New("db error")
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 
@@ -278,12 +284,12 @@ func TestGetJobsSummary_DBErrorOnIdle(t *testing.T) {
 
 func TestGetJobsSummary_DBErrorOnSlotUsage(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
-		ListCharacterSlotUsageFn: func(ctx context.Context) ([]store.ListCharacterSlotUsageRow, error) {
+		ListCharacterSlotUsageFn: func(_ context.Context) ([]store.ListCharacterSlotUsageRow, error) {
 			return nil, errors.New("db error")
 		},
 	}, nil, nil, testFS())
 
-	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/jobs/summary", http.NoBody)
 	rr := httptest.NewRecorder()
 	mux.ServeHTTP(rr, req)
 

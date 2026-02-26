@@ -114,33 +114,33 @@ func (m *mockQuerier) CountOverdueJobs(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockQuerier) DeleteJobByID(ctx context.Context, id int64) error { return nil }
+func (m *mockQuerier) DeleteJobByID(_ context.Context, _ int64) error { return nil }
 
-func (m *mockQuerier) GetCorporation(ctx context.Context, id int64) (store.Corporation, error) {
+func (m *mockQuerier) GetCorporation(_ context.Context, _ int64) (store.Corporation, error) {
 	return store.Corporation{}, nil
 }
 
-func (m *mockQuerier) GetEveType(ctx context.Context, id int64) (store.EveType, error) {
+func (m *mockQuerier) GetEveType(_ context.Context, _ int64) (store.EveType, error) {
 	return store.EveType{}, nil
 }
 
-func (m *mockQuerier) GetSyncState(ctx context.Context, arg store.GetSyncStateParams) (store.SyncState, error) {
+func (m *mockQuerier) GetSyncState(_ context.Context, _ store.GetSyncStateParams) (store.SyncState, error) {
 	return store.SyncState{}, nil
 }
 
-func (m *mockQuerier) InsertEveCategory(ctx context.Context, arg store.InsertEveCategoryParams) error {
+func (m *mockQuerier) InsertEveCategory(_ context.Context, _ store.InsertEveCategoryParams) error {
 	return nil
 }
 
-func (m *mockQuerier) InsertEveGroup(ctx context.Context, arg store.InsertEveGroupParams) error {
+func (m *mockQuerier) InsertEveGroup(_ context.Context, _ store.InsertEveGroupParams) error {
 	return nil
 }
 
-func (m *mockQuerier) InsertEveType(ctx context.Context, arg store.InsertEveTypeParams) error {
+func (m *mockQuerier) InsertEveType(_ context.Context, _ store.InsertEveTypeParams) error {
 	return nil
 }
 
-func (m *mockQuerier) ListBlueprintTypeIDsByOwner(ctx context.Context, arg store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error) {
+func (m *mockQuerier) ListBlueprintTypeIDsByOwner(_ context.Context, _ store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error) {
 	return nil, nil
 }
 
@@ -158,7 +158,7 @@ func (m *mockQuerier) ListCharacterSlotUsage(ctx context.Context) ([]store.ListC
 	return nil, nil
 }
 
-func (m *mockQuerier) ListJobIDsByOwner(ctx context.Context, arg store.ListJobIDsByOwnerParams) ([]int64, error) {
+func (m *mockQuerier) ListJobIDsByOwner(_ context.Context, _ store.ListJobIDsByOwnerParams) ([]int64, error) {
 	return nil, nil
 }
 
@@ -169,16 +169,16 @@ func (m *mockQuerier) ListSyncStatus(ctx context.Context) ([]store.ListSyncStatu
 	return nil, nil
 }
 
-func (m *mockQuerier) UpsertBlueprint(ctx context.Context, arg store.UpsertBlueprintParams) error {
+func (m *mockQuerier) UpsertBlueprint(_ context.Context, _ store.UpsertBlueprintParams) error {
 	return nil
 }
 
-func (m *mockQuerier) UpsertCharacter(ctx context.Context, arg store.UpsertCharacterParams) error {
+func (m *mockQuerier) UpsertCharacter(_ context.Context, _ store.UpsertCharacterParams) error {
 	return nil
 }
 
-func (m *mockQuerier) UpsertJob(ctx context.Context, arg store.UpsertJobParams) error { return nil }
+func (m *mockQuerier) UpsertJob(_ context.Context, _ store.UpsertJobParams) error { return nil }
 
-func (m *mockQuerier) UpsertSyncState(ctx context.Context, arg store.UpsertSyncStateParams) error {
+func (m *mockQuerier) UpsertSyncState(_ context.Context, _ store.UpsertSyncStateParams) error {
 	return nil
 }
