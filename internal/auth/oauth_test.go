@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -96,15 +97,21 @@ func TestHandleCallback_StateConsumedOnce(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token":  "tok",
 			"token_type":    "Bearer",
 			"refresh_token": "ref",
 			"expires_in":    1200,
 		})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	})
 	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(verifyResponse{CharacterID: 1, CharacterName: "X"})
+		err := json.NewEncoder(w).Encode(verifyResponse{CharacterID: 1, CharacterName: "X"})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	})
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
@@ -147,10 +154,13 @@ func TestCallVerify_ParsesResponse(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(verifyResponse{
+		err := json.NewEncoder(w).Encode(verifyResponse{
 			CharacterID:   12345,
 			CharacterName: "TinkerBear",
 		})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	}))
 	defer ts.Close()
 
@@ -191,7 +201,10 @@ func TestCallVerify_NonOKStatus(t *testing.T) {
 func TestCallVerify_ZeroCharacterID(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(verifyResponse{CharacterID: 0, CharacterName: ""})
+		err := json.NewEncoder(w).Encode(verifyResponse{CharacterID: 0, CharacterName: ""})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	}))
 	defer ts.Close()
 
@@ -212,19 +225,25 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"access_token":  "access-abc",
 			"token_type":    "Bearer",
 			"refresh_token": "refresh-xyz",
 			"expires_in":    3600,
 		})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	})
 	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(verifyResponse{
+		err := json.NewEncoder(w).Encode(verifyResponse{
 			CharacterID:   99999,
 			CharacterName: "BearPilot",
 		})
+		if err != nil {
+			log.Fatalf("encode: %v", err)
+		}
 	})
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
