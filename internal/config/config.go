@@ -8,6 +8,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const configPath = "auspex.yaml"
+
 // Config holds all runtime configuration for Auspex.
 type Config struct {
 	Port            int       `yaml:"port"`
@@ -19,20 +21,20 @@ type Config struct {
 // ESIConfig holds EVE SSO / ESI credentials.
 type ESIConfig struct {
 	ClientID     string `yaml:"client_id"`
-	ClientSecret string `yaml:"client_secret"`
+	ClientSecret string `yaml:"client_secret"` //nolint:gosec // G117: false positive, config field read from local yaml file
 	CallbackURL  string `yaml:"callback_url"`
 }
 
 // Load reads configuration from the file at path and returns a validated Config.
 // The caller is responsible for obtaining path from CLI flags or other sources.
-func Load(path string) (*Config, error) {
-	return loadFromFile(path)
+func Load() (*Config, error) {
+	return loadFromFile(configPath)
 }
 
 func loadFromFile(path string) (*Config, error) {
 	cfg := defaults()
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // G304: false positive, path is constant
 	if err != nil {
 		return nil, fmt.Errorf("reading config file %q: %w", path, err)
 	}
