@@ -26,6 +26,7 @@ var ErrInvalidState = errors.New("invalid or expired OAuth state")
 
 // oauth.go: authorization URL generation, code→token exchange, /verify call.
 
+//nolint:gosec // G101: these are public EVE SSO endpoints, not credentials
 const (
 	eveAuthURL   = "https://login.eveonline.com/v2/oauth/authorize"
 	eveTokenURL  = "https://login.eveonline.com/v2/oauth/token"
@@ -139,18 +140,18 @@ func (p *Provider) HandleCallback(ctx context.Context, code, state string) (int6
 
 // callVerify calls EVE SSO /verify with the access token and returns character info.
 func (p *Provider) callVerify(ctx context.Context, accessToken string) (verifyResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.verifyURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.verifyURL, http.NoBody)
 	if err != nil {
 		return verifyResponse{}, fmt.Errorf("building verify request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := p.httpClient.Do(req)
+	resp, err := p.httpClient.Do(req) //nolint:gosec // URL is sourced from validated config, not user input
 	if err != nil {
 		return verifyResponse{}, fmt.Errorf("calling /verify: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck // closing response body on read path, error is not actionable
 
 	if resp.StatusCode != http.StatusOK {
 		return verifyResponse{}, fmt.Errorf("verify returned HTTP %d", resp.StatusCode)
