@@ -167,8 +167,9 @@ Bugs and minor improvements discovered during development are recorded in `tasks
 3. Write tests together with the code in the same conversation
 4. Run code and tests, test manually
 5. If something is wrong (compilation errors, failing tests, logic errors) — correct in the same conversation
-6. Commit working code together with tests, updating the task status to `✅ Done — commit TBD` in the same commit
-7. Run `git log --oneline -1` to get the real hash, replace `TBD` with it, commit the tasks file alone: `"Update TASK-XX commit hash in tasks-{scope}.md"`
+6. Run `make check` — lint, tests, and full build must all pass. Fix any failures in the same conversation before committing.
+7. Commit working code together with tests, updating the task status to `✅ Done — commit TBD` in the same commit
+8. Run `git log --oneline -1` to get the real hash, replace `TBD` with it, commit the tasks file alone: `"Update TASK-XX commit hash in tasks-{scope}.md"`
 
 **Never use `git commit --amend` to add the hash** — amend changes the hash of the commit you are trying to record, making the stored hash immediately wrong. Always use a plain follow-up commit for the hash update.
 
@@ -291,6 +292,9 @@ The only permitted exceptions are EVE Online proper nouns (ship names, item name
 Once implemented, the standard workflow will be:
 
 ```bash
+# Run before committing — lint + tests + full build must all pass
+make check
+
 # Full build (frontend → sqlc → Go binary)
 make build            # macOS/Linux; on Windows requires make to be installed separately
 
