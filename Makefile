@@ -1,35 +1,33 @@
-.PHONY: build frontend sqlc test lint lint-go lint-js check build-release release clean clean-all tidy
+.PHONY: build test release-local release clean clean-all
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-build: frontend sqlc
+# Full check + build: consistency checks, linters, tests, compilation.
+# Run before every push. Identical to what CI runs.
+build:
+	go mod tidy && git diff --exit-code go.mod go.sum
+	sqlc generate && git diff --exit-code internal/store/
+	go vet ./...
+	golangci-lint run
+	cd cmd/auspex/web && npm audit --audit-level=high
+	go test ./...
+	cd cmd/auspex/web && npm ci && npm run build
 	go build -o auspex ./cmd/auspex/
 
-frontend:
-	cd cmd/auspex/web && npm install && npm run build
+# ── Test ──────────────────────────────────────────────────────────────────────
 
-sqlc:
-	sqlc generate
-
-# ── Test & Lint ───────────────────────────────────────────────────────────────
-
+# Runs Go tests only — quick feedback during development.
 test:
 	go test ./...
 
-lint: lint-go lint-js
-
-lint-go:
-	go vet ./...
-	golangci-lint run
-
-lint-js:
-	cd cmd/auspex/web && npm audit --audit-level=high
-
-# ── CI (run before pushing) ───────────────────────────────────────────────────
-
-check: lint test build
-
 # ── Release ───────────────────────────────────────────────────────────────────
+
+# Internal targets — used by .goreleaser.yaml hooks, do not call directly.
+frontend:
+	cd cmd/auspex/web && npm ci && npm run build
+
+sqlc:
+	sqlc generate
 
 # Builds all platforms locally without publishing — for local testing.
 release-local:
@@ -38,6 +36,9 @@ release-local:
 # Builds all platforms and publishes to GitHub Releases.
 # Triggered automatically by CI on git tag push — do not run manually.
 release:
+ifndef CI
+	$(error this target should only run in CI. Use 'make release-local' for local testing)
+endif
 	goreleaser release --clean
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
