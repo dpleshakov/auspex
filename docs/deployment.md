@@ -17,7 +17,15 @@ No prerequisites. Download the binary and run it.
 | Go | 1.22+ | [golang.org/dl](https://golang.org/dl/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 | npm | 9+ | Bundled with Node.js |
+| make | any | Bundled with macOS/Linux. Windows: install separately. |
 | sqlc | v2 | `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest` |
+| golangci-lint | v2 | `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` — required for `make check` |
+
+### Release (maintainers only)
+
+| Tool | Version | Install |
+|------|---------|---------|
+| goreleaser | v2 | `go install github.com/goreleaser/goreleaser/v2@latest` |
 
 ---
 
@@ -156,6 +164,31 @@ On `SIGINT` or `SIGTERM` (Ctrl+C):
 4. Restart
 
 The database schema uses up-only migrations. New versions add migrations automatically on startup; no manual SQL is required.
+
+---
+
+## Releasing
+
+Releases are built with [goreleaser](https://goreleaser.com/). The release config lives in `.goreleaser.yaml` — it builds binaries for Linux, macOS, and Windows (amd64 + arm64) and uploads archives to GitHub Releases.
+
+### Test a release build locally (no publish)
+
+```bash
+make release-local
+```
+
+Runs `goreleaser release --snapshot --clean`. Produces archives under `dist/` without creating a GitHub release.
+
+### Publish a release
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The `make release` target (`goreleaser release --clean`) is intended for CI. It requires a `GITHUB_TOKEN` environment variable with `repo` scope and a clean git tag.
+
+> **Note:** goreleaser runs `make frontend` and `make sqlc` automatically before building (defined in `.goreleaser.yaml` `before.hooks`). Node.js and sqlc must still be installed on the release host.
 
 ---
 

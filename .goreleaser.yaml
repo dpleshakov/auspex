@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# vim: set ts=2 sw=2 tw=0 fo=cnqoj
+
+version: 2
+
+project_name: auspex
+
+before:
+  hooks:
+    - make frontend
+    - make sqlc
+
+builds:
+  - main: ./cmd/auspex/
+    binary: auspex
+    goos: [linux, windows, darwin]
+    goarch: [amd64, arm64]
+
+archives:
+  - name_template: "auspex-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - CHANGELOG.md
+      - auspex.example.yaml
+
+release:
+  github:
+    owner: dpleshakov
+    name: auspex

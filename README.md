@@ -29,7 +29,10 @@ See [docs/tech-debt.md](docs/tech-debt.md) and [docs/tasks-backlog.md](docs/task
 |------|---------|-------|
 | Go | 1.22+ | [golang.org](https://golang.org/dl/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
+| make | any | Bundled with macOS/Linux. Windows: install separately. |
 | sqlc | v2 | `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest` |
+| golangci-lint | v2 | `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` — required for `make check` |
+| goreleaser | v2 | `go install github.com/goreleaser/goreleaser/v2@latest` — required for `make release-local` / `make release` |
 | EVE Developer App | — | [developers.eveonline.com](https://developers.eveonline.com/) |
 
 ## Quick Start
