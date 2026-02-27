@@ -12,7 +12,7 @@ import (
 
 // mockQuerier implements store.Querier for worker unit tests.
 // Methods exercised by the worker are wired through function fields so each
-// test can control their behaviour. Unset fields panic — an unexpected call
+// test can control their behavior. Unset fields panic — an unexpected call
 // indicates a test bug.
 type mockQuerier struct {
 	// TASK-09: scheduling loop
@@ -325,7 +325,7 @@ func TestCorporation_CacheExpired_Synced(t *testing.T) {
 	}
 }
 
-// TestRun_StopsOnContextCancel verifies that Run returns promptly when ctx is cancelled.
+// TestRun_StopsOnContextCancel verifies that Run returns promptly when ctx is canceled.
 func TestRun_StopsOnContextCancel(t *testing.T) {
 	q := &mockQuerier{
 		// Use a long interval so the ticker doesn't fire during the test.

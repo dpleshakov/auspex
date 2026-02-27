@@ -58,12 +58,12 @@ func NewClient(h *http.Client) *httpClient {
 }
 
 // do executes a GET request to url with the given Bearer token.
-// It retries on 429 (honouring Retry-After) and 5xx (exponential backoff),
+// It retries on 429 (honoring Retry-After) and 5xx (exponential backoff),
 // up to maxRetries times. Returns the raw response body and the parsed Expires header.
 // A 4xx response other than 429 is returned as an error without retrying.
 func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Time, error) {
 	for attempt := 0; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 		if err != nil {
 			return nil, time.Time{}, fmt.Errorf("building request: %w", err)
 		}
@@ -72,13 +72,13 @@ func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Ti
 			req.Header.Set("Authorization", "Bearer "+token)
 		}
 
-		resp, err := c.http.Do(req)
+		resp, err := c.http.Do(req) //nolint:gosec // G704: url is always constructed from a hardcoded base URL within this package, never from user input
 		if err != nil {
 			return nil, time.Time{}, fmt.Errorf("sending request: %w", err)
 		}
 
 		body, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		if err != nil {
 			return nil, time.Time{}, fmt.Errorf("reading response body: %w", err)
 		}

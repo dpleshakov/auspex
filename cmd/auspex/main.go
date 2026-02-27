@@ -30,14 +30,20 @@ import (
 var staticFiles embed.FS
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		return fmt.Errorf("config: %v", err)
 	}
 
 	database, err := db.Open(cfg.DBPath)
 	if err != nil {
-		log.Fatalf("db: %v", err)
+		return fmt.Errorf("db: %v", err)
 	}
 	defer database.Close() //nolint:errcheck // Close on shutdown, error is inconsequential
 
@@ -62,14 +68,15 @@ func main() {
 
 	distFS, err := fs.Sub(staticFiles, "web/dist")
 	if err != nil {
-		log.Fatalf("preparing static files: %v", err)
+		return fmt.Errorf("preparing static files: %v", err)
 	}
 
 	router := api.NewRouter(queries, worker, authProvider, distFS)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
-		Handler: router,
+		Addr:              fmt.Sprintf(":%d", cfg.Port),
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	// Start the sync worker in the background.
@@ -103,10 +110,12 @@ func main() {
 	log.Printf("Auspex listening on http://localhost:%d", cfg.Port)
 
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("server: %v", err)
+		return fmt.Errorf("server: %v", err)
 	}
 
 	// Wait for the sync worker to complete its current cycle before exiting.
 	wg.Wait()
 	log.Println("shutdown complete")
+
+	return nil
 }

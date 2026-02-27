@@ -58,7 +58,7 @@ func New(q store.Querier, esiClient esi.Client, interval time.Duration) *Worker 
 	return w
 }
 
-// Run starts the background sync loop and blocks until ctx is cancelled.
+// Run starts the background sync loop and blocks until ctx is canceled.
 // Intended to be called in a goroutine:
 //
 //	go worker.Run(ctx)

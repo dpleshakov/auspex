@@ -273,7 +273,7 @@ returns 400 "missing code or state" — technically correct but unhelpful.
 
 **Not a problem for MVP** — the user sees the browser's raw 400 page
 for a moment before the tab can be closed. Fix: check `req.URL.Query().Get("error")`
-first and redirect to `/?auth_error=cancelled` so the frontend can show a
+first and redirect to `/?auth_error=canceled` so the frontend can show a
 friendly message.
 
 ---

@@ -15,16 +15,16 @@ func serveUniverse(t *testing.T) http.Handler {
 		switch r.URL.Path {
 		case "/universe/types/34":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
+			_, _ = w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
 		case "/universe/groups/18":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
+			_, _ = w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
 		case "/universe/categories/4":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"category_id":4,"name":"Material"}`))
+			_, _ = w.Write([]byte(`{"category_id":4,"name":"Material"}`))
 		default:
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
 		}
 	})
 }
@@ -65,19 +65,22 @@ func TestGetUniverseType_NoTokenSent(t *testing.T) {
 		switch r.URL.Path {
 		case "/universe/types/34":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
+			_, _ = w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
 		case "/universe/groups/18":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
+			_, _ = w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
 		case "/universe/categories/4":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"category_id":4,"name":"Material"}`))
+			_, _ = w.Write([]byte(`{"category_id":4,"name":"Material"}`))
 		}
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	c.GetUniverseType(context.Background(), 34)
+	_, err := c.GetUniverseType(context.Background(), 34)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if gotAuth != "" {
 		t.Errorf("expected no Authorization header for public endpoint, got %q", gotAuth)
 	}
@@ -86,7 +89,7 @@ func TestGetUniverseType_NoTokenSent(t *testing.T) {
 func TestGetUniverseType_TypeFetchError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"type not found"}`))
+		_, _ = w.Write([]byte(`{"error":"type not found"}`))
 	}))
 	defer srv.Close()
 
@@ -102,11 +105,11 @@ func TestGetUniverseType_GroupFetchError(t *testing.T) {
 		switch r.URL.Path {
 		case "/universe/types/34":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
+			_, _ = w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
 		default:
 			// group and category endpoints fail
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
 		}
 	}))
 	defer srv.Close()
@@ -123,14 +126,14 @@ func TestGetUniverseType_CategoryFetchError(t *testing.T) {
 		switch r.URL.Path {
 		case "/universe/types/34":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
+			_, _ = w.Write([]byte(`{"type_id":34,"name":"Tritanium","group_id":18}`))
 		case "/universe/groups/18":
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
+			_, _ = w.Write([]byte(`{"group_id":18,"name":"Mineral","category_id":4}`))
 		default:
 			// category endpoint fails
 			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not found"}`))
+			_, _ = w.Write([]byte(`{"error":"not found"}`))
 		}
 	}))
 	defer srv.Close()
