@@ -1,4 +1,4 @@
-.PHONY: build frontend sqlc test lint lint-go lint-js check clean clean-all
+.PHONY: build frontend sqlc test lint lint-go lint-js check build-release release clean clean-all tidy
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -28,6 +28,17 @@ lint-js:
 # ── CI (run before pushing) ───────────────────────────────────────────────────
 
 check: lint test build
+
+# ── Release ───────────────────────────────────────────────────────────────────
+
+# Builds all platforms locally without publishing — for local testing.
+release-local:
+	goreleaser release --snapshot --clean
+
+# Builds all platforms and publishes to GitHub Releases.
+# Triggered automatically by CI on git tag push — do not run manually.
+release:
+	goreleaser release --clean
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
