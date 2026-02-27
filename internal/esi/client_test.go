@@ -93,7 +93,7 @@ func TestDo_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Expires", expiresHeader)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"ok":true}`))
+		_, _ = w.Write([]byte(`{"ok":true}`))
 	}))
 	defer srv.Close()
 
@@ -116,12 +116,15 @@ func TestDo_AuthorizationHeader(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	c.do(context.Background(), srv.URL, "mytoken")
+	_, _, err := c.do(context.Background(), srv.URL, "mytoken")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if gotAuth != "Bearer mytoken" {
 		t.Errorf("Authorization: got %q, want %q", gotAuth, "Bearer mytoken")
 	}
@@ -132,12 +135,15 @@ func TestDo_NoAuthHeader_WhenTokenEmpty(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotAuth = r.Header.Get("Authorization")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	c.do(context.Background(), srv.URL, "")
+	_, _, err := c.do(context.Background(), srv.URL, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if gotAuth != "" {
 		t.Errorf("expected no Authorization header, got %q", gotAuth)
 	}
@@ -156,7 +162,7 @@ func TestDo_Retry429_SucceedsAfterRetries(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -213,7 +219,7 @@ func TestDo_Retry5xx_SucceedsAfterRetries(t *testing.T) {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{}`))
 	}))
 	defer srv.Close()
 
@@ -261,7 +267,7 @@ func TestDo_Retry5xx_ExhaustedReturnsError(t *testing.T) {
 
 // --- do: context cancellation during sleep ---
 
-func TestDo_ContextCancelledDuringSleep(t *testing.T) {
+func TestDo_ContextCanceledDuringSleep(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Retry-After", "60")
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -273,7 +279,7 @@ func TestDo_ContextCancelledDuringSleep(t *testing.T) {
 	c := NewClient(srv.Client())
 	c.baseURL = srv.URL
 	c.sleep = func(_ time.Duration) {
-		cancel() // simulate context cancelled mid-sleep
+		cancel() // simulate context canceled mid-sleep
 	}
 
 	_, _, err := c.do(ctx, srv.URL, "")
@@ -290,7 +296,7 @@ func TestDo_NoRetry4xx(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(`{"error":"not found"}`))
+		_, _ = w.Write([]byte(`{"error":"not found"}`))
 	}))
 	defer srv.Close()
 

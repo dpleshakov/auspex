@@ -15,7 +15,7 @@ func TestGetCharacterBlueprints_ParsesResponse(t *testing.T) {
 	]`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(payload))
+		_, _ = w.Write([]byte(payload))
 	}))
 	defer srv.Close()
 
@@ -40,7 +40,7 @@ func TestGetCharacterBlueprints_FiltersBPCs(t *testing.T) {
 	]`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(payload))
+		_, _ = w.Write([]byte(payload))
 	}))
 	defer srv.Close()
 
@@ -60,7 +60,7 @@ func TestGetCharacterBlueprints_FiltersBPCs(t *testing.T) {
 func TestGetCharacterBlueprints_EmptyList(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer srv.Close()
 
@@ -79,12 +79,15 @@ func TestGetCharacterBlueprints_UsesCorrectURL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	c.GetCharacterBlueprints(context.Background(), 42, "tok")
+	_, _, err := c.GetCharacterBlueprints(context.Background(), 42, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !strings.Contains(gotPath, "/characters/42/blueprints") {
 		t.Errorf("unexpected URL path: %q", gotPath)
 	}
@@ -97,7 +100,7 @@ func TestGetCorporationBlueprints_FiltersBPCs(t *testing.T) {
 	]`
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(payload))
+		_, _ = w.Write([]byte(payload))
 	}))
 	defer srv.Close()
 
@@ -116,12 +119,15 @@ func TestGetCorporationBlueprints_UsesCorrectURL(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`[]`))
+		_, _ = w.Write([]byte(`[]`))
 	}))
 	defer srv.Close()
 
 	c := newTestClient(srv)
-	c.GetCorporationBlueprints(context.Background(), 99999, "tok")
+	_, _, err := c.GetCorporationBlueprints(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if !strings.Contains(gotPath, "/corporations/99999/blueprints") {
 		t.Errorf("unexpected URL path: %q", gotPath)
 	}

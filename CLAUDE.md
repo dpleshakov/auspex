@@ -349,7 +349,7 @@ internal/
 
 - `sync_state` table tracks ESI cache expiry per `(owner_type, owner_id, endpoint)` — the sync worker reads `Expires` response header and writes it here
 - Blueprint `status` is derived, not stored: a blueprint is `idle` if it has no associated job in the `jobs` table with `status IN ('active', 'ready')`
-- `jobs` table only stores active/ready jobs; completed/cancelled jobs from ESI are ignored
+- `jobs` table only stores active/ready jobs; completed/canceled jobs from ESI are ignored
 
 ## Tech Stack
 
