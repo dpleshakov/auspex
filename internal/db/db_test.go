@@ -16,7 +16,11 @@ func TestOpen_TablesCreated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err = db.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	}()
 
 	for _, table := range expectedTables {
 		var name string
@@ -37,7 +41,9 @@ func TestOpen_Idempotent(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Open call %d: %v", i+1, err)
 		}
-		db.Close()
+		if err = db.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
 	}
 }
 
@@ -46,7 +52,11 @@ func TestOpen_MigrationRecorded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err = db.Close(); err != nil {
+			t.Fatalf("close: %v", err)
+		}
+	}()
 
 	var count int
 	if err := db.QueryRow(

@@ -26,28 +26,31 @@ func Open(path string) (*sql.DB, error) {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
+	var setupErr error
+	defer func() {
+		if setupErr != nil {
+			_ = db.Close() //nolint:errcheck // cleanup after setup failure
+		}
+	}()
+
 	// Limit to a single connection so PRAGMAs set below apply to every query.
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("pinging database: %w", err)
+	if setupErr := db.Ping(); setupErr != nil {
+		return nil, fmt.Errorf("pinging database: %w", setupErr)
 	}
 
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("setting WAL mode: %w", err)
+	if _, setupErr := db.Exec("PRAGMA journal_mode=WAL"); setupErr != nil {
+		return nil, fmt.Errorf("setting WAL mode: %w", setupErr)
 	}
 
-	if _, err := db.Exec("PRAGMA foreign_keys=ON"); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("enabling foreign keys: %w", err)
+	if _, setupErr := db.Exec("PRAGMA foreign_keys=ON"); setupErr != nil {
+		return nil, fmt.Errorf("enabling foreign keys: %w", setupErr)
 	}
 
-	if err := runMigrations(db); err != nil {
-		db.Close()
-		return nil, fmt.Errorf("running migrations: %w", err)
+	if setupErr := runMigrations(db); setupErr != nil {
+		return nil, fmt.Errorf("running migrations: %w", setupErr)
 	}
 
 	return db, nil
@@ -110,7 +113,7 @@ func applyMigration(db *sql.DB, filename, content string) error {
 	if err != nil {
 		return fmt.Errorf("beginning transaction for migration %s: %w", filename, err)
 	}
-	defer tx.Rollback() //nolint:errcheck
+	defer tx.Rollback() //nolint:errcheck // no way to do anything
 
 	if _, err := tx.Exec(content); err != nil {
 		return fmt.Errorf("executing migration %s: %w", filename, err)
