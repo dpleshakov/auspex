@@ -27,7 +27,12 @@ archives:
       - CHANGELOG.md
       - auspex.example.yaml
 
+changelog:
+  disable: true  # notes come from CHANGELOG.md, extracted in CI
+
 release:
   github:
     owner: dpleshakov
     name: auspex
+  name_template: "Auspex v{{ .Version }}"
+  draft: true  # review before publishing
