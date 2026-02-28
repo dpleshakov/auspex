@@ -1,4 +1,4 @@
-.PHONY: build test release-local release clean clean-all
+.PHONY: build test release release-notes clean clean-all
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -30,9 +30,15 @@ frontend:
 sqlc:
 	sqlc generate
 
+# Extracts the release notes for VERSION from CHANGELOG.md → docs/release-notes.md.
+# Can be called standalone to verify output: make release-notes VERSION=0.1.0
+VERSION ?= Unreleased
+release-notes:
+	go run tools/release-notes.go $(VERSION)
+
 # Builds all platforms locally without publishing — for local testing.
-release:
-	goreleaser release --snapshot --clean
+release: release-notes
+	goreleaser release --snapshot --clean --release-notes docs/release-notes.md --release-footer docs/release-footer.md
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
