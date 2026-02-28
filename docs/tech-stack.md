@@ -12,7 +12,7 @@
 
 | Component | Solution | Version |
 |-----------|----------|---------|
-| Language | Go | 1.22+ |
+| Language | Go | 1.26+ |
 | HTTP routing | Chi | v5 |
 | Database | SQLite | — |
 | SQLite driver | modernc.org/sqlite | latest |
@@ -108,7 +108,7 @@ A BPO table with sorting, filters, highlighting, and periodic data refresh is ex
 
 ## References and Versions
 
-- Go: https://go.dev/doc/ (1.22+)
+- Go: https://go.dev/doc/ (1.26+)
 - Chi: https://github.com/go-chi/chi (v5)
 - sqlc: https://docs.sqlc.dev (v2)
 - modernc.org/sqlite: https://pkg.go.dev/modernc.org/sqlite

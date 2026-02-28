@@ -359,7 +359,7 @@ internal/
 
 | Layer | Technology |
 |-------|-----------|
-| Backend language | Go 1.22+ |
+| Backend language | Go 1.26+ |
 | HTTP router | Chi v5 |
 | Database | SQLite via `modernc.org/sqlite` (pure Go, no CGO) |
 | SQL codegen | sqlc v2 |
