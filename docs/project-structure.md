@@ -86,7 +86,7 @@ auspex/
 
 | File | Purpose |
 |------|---------|
-| `go.mod` | Go module definition: `github.com/dpleshakov/auspex`, requires Go 1.22+ |
+| `go.mod` | Go module definition: `github.com/dpleshakov/auspex`, requires Go 1.26+ |
 | `sqlc.yaml` | sqlc v2 config: reads schema from `internal/db/migrations/`, queries from `internal/db/queries/`, outputs typed Go code to `internal/store/` |
 | `auspex.example.yaml` | **Created in Phase 7** when `internal/config/` is implemented. Field names are determined by the `Config` struct. The real `auspex.yaml` (with credentials) is gitignored. |
 | `.gitignore` | Ignores binary, `web/dist/*` (except `.gitkeep`), `node_modules/`, `*.db`, `auspex.yaml` |

@@ -14,7 +14,7 @@ No prerequisites. Download the binary and run it.
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Go | 1.22+ | [golang.org/dl](https://golang.org/dl/) |
+| Go | 1.26+ | [golang.org/dl](https://golang.org/dl/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 | npm | 9+ | Bundled with Node.js |
 | make | any | Bundled with macOS/Linux. Windows: install separately. |

@@ -27,7 +27,7 @@ See [docs/tech-debt.md](docs/tech-debt.md) and [docs/tasks-backlog.md](docs/task
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Go | 1.22+ | [golang.org](https://golang.org/dl/) |
+| Go | 1.26+ | [golang.org](https://golang.org/dl/) |
 | Node.js | 18+ | [nodejs.org](https://nodejs.org/) |
 | make | any | Bundled with macOS/Linux. Windows: install separately. |
 | sqlc | v2 | `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest` |
