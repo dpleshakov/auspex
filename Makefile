@@ -22,24 +22,17 @@ test:
 
 # ── Release ───────────────────────────────────────────────────────────────────
 
-# Internal targets — used by .goreleaser.yaml hooks, do not call directly.
+# Internal target — used by .goreleaser.yaml hooks, do not call directly.
 frontend:
 	cd cmd/auspex/web && npm ci && npm run build
 
+# Internal target — used by .goreleaser.yaml hooks, do not call directly.
 sqlc:
 	sqlc generate
 
 # Builds all platforms locally without publishing — for local testing.
-release-local:
-	goreleaser release --snapshot --clean
-
-# Builds all platforms and publishes to GitHub Releases.
-# Triggered automatically by CI on git tag push — do not run manually.
 release:
-ifndef CI
-	$(error this target should only run in CI. Use 'make release-local' for local testing)
-endif
-	goreleaser release --clean
+	goreleaser release --snapshot --clean
 
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
