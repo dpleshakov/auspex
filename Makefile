@@ -43,7 +43,7 @@ release: release-notes
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
 clean:
-	go run tools/rm.go auspex auspex.exe
+	go run tools/rm.go auspex auspex.exe docs/release-notes.md
 	go run tools/rm.go -r cmd/auspex/web/dist
 	go run tools/touch.go cmd/auspex/web/dist/.gitkeep
 
