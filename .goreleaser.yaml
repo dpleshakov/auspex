@@ -28,11 +28,6 @@ archives:
       - CHANGELOG.md
       - auspex.example.yaml
 
-changelog:
-  filters:
-    exclude:
-      - '.*'  # notes come from CHANGELOG.md, extracted in CI
-
 release:
   github:
     owner: dpleshakov
