@@ -29,7 +29,9 @@ archives:
       - auspex.example.yaml
 
 changelog:
-  disable: true  # notes come from CHANGELOG.md, extracted in CI
+  filters:
+    exclude:
+      - '.*'  # notes come from CHANGELOG.md, extracted in CI
 
 release:
   github:
