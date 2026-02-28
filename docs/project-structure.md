@@ -69,6 +69,9 @@ auspex/
 │   │   └── .gitkeep
 │   └── sync/
 │       └── worker.go
+├── tools/
+│   ├── rm.go               # cross-platform file/dir removal (go run tools/rm.go)
+│   └── touch.go            # cross-platform file touch/create (go run tools/touch.go)
 ├── .gitignore
 ├── go.mod
 ├── Makefile
@@ -88,6 +91,7 @@ auspex/
 | `auspex.example.yaml` | **Created in Phase 7** when `internal/config/` is implemented. Field names are determined by the `Config` struct. The real `auspex.yaml` (with credentials) is gitignored. |
 | `.gitignore` | Ignores binary, `web/dist/*` (except `.gitkeep`), `node_modules/`, `*.db`, `auspex.yaml` |
 | `Makefile` | Build automation: `build`, `frontend`, `sqlc`, `test`, `lint`, `check`, `clean`, `clean-all` targets. On Windows requires `make` to be installed separately. |
+| `tools/` | Go helper scripts for cross-platform build tasks. Tagged `//go:build ignore` — excluded from normal builds, invoked via `go run tools/<name>.go`. |
 
 ---
 
@@ -208,6 +212,18 @@ Chi router and HTTP handlers. Never calls ESI directly — reads only from `stor
 
 ---
 
+### `tools/`
+
+Go helper scripts for cross-platform build automation. Each file carries `//go:build ignore`
+so it is excluded from `go build ./...` but can be invoked directly via `go run`:
+
+| File | Purpose |
+|------|---------|
+| `rm.go` | Removes files or directories. Flag `-r` enables recursive removal. Missing paths are silently skipped (like `rm -f`). |
+| `touch.go` | Creates a file (and any missing parent directories). Updates mtime if the file already exists. |
+
+---
+
 ### `Makefile`
 
 Top-level build automation. Targets:
@@ -222,7 +238,7 @@ Top-level build automation. Targets:
 | `lint-go` | `go vet ./...` + `golangci-lint run` |
 | `lint-js` | `npm audit --audit-level=high` |
 | `check` | `lint` + `test` + `build` (run before pushing) |
-| `clean` | Removes binary and `web/dist/*` (keeps `.gitkeep`) |
+| `clean` | Removes binary and rebuilds `web/dist/` with only `.gitkeep`. Uses `go run tools/rm.go` and `go run tools/touch.go` for cross-platform compatibility. |
 | `clean-all` | `clean` + removes `auspex.db` |
 
 **Build order matters:** the frontend must be built before `go build` so that `web/dist/` contains real files for `//go:embed`. `sqlc generate` must run before `go build` so that `internal/store/` contains generated code.
