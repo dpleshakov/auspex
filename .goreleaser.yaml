@@ -9,6 +9,7 @@ before:
   hooks:
     - make frontend
     - make sqlc
+    - make release-notes VERSION={{ .Version }}
 
 builds:
   - main: ./cmd/auspex/
