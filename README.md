@@ -96,4 +96,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions, tooling requireme
 
 ## License
 
-This project is not affiliated with CCP Games. EVE Online and all related marks are property of CCP hf.
+Copyright © 2026 Dmitry Pleshakov. Licensed under the [MIT License](LICENSE).
+
+EVE Online and all related marks are property of CCP hf. This project is not affiliated with CCP Games.
