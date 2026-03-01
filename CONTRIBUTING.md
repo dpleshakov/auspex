@@ -73,7 +73,7 @@ Open `http://localhost:5173`.
 | `clean` | Remove binary and rebuild `web/dist/` with only `.gitkeep` |
 | `clean-all` | `clean` + remove `auspex.db` |
 | `release-notes` | Extract release notes for a version from `CHANGELOG.md` |
-| `versioninfo` | Generate `cmd/auspex/versioninfo.json` and `resource.syso` for Windows builds |
+| `versioninfo` | Generate `cmd/auspex/versioninfo.json` and `*.syso` for Windows builds |
 | `release` | Local snapshot build via goreleaser (no publish) |
 
 ## Schema Changes
