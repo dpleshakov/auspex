@@ -12,7 +12,7 @@ build:
 	go vet ./...
 	golangci-lint run
 	go test ./...
-	go build -o auspex ./cmd/auspex/
+	go build ./cmd/auspex/
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
