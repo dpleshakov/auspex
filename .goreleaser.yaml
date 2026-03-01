@@ -9,6 +9,7 @@ before:
   hooks:
     - make frontend
     - make sqlc
+    - make versioninfo VERSION={{ .Version }}
     - make release-notes VERSION={{ if .IsSnapshot }}Unreleased{{ else }}{{ .Version }}{{ end }}
 
 builds:

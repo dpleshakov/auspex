@@ -29,6 +29,9 @@ jobs:
       - name: Install sqlc
         run: go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 
+      - name: Install goversioninfo
+        run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+
       - name: Release
         uses: goreleaser/goreleaser-action@v6
         with:
