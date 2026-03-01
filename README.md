@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/auspex.png" alt="Auspex" width="256">
+</p>
+
 # Auspex
 
 A local desktop tool for EVE Online industrialists who manage multiple manufacturing characters. Auspex pulls data from the EVE ESI API and presents a unified dashboard of your BPO library and research job status across all characters and corporations.
