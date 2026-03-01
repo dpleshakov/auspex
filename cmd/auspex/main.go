@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -29,7 +30,22 @@ import (
 //go:embed all:web/dist
 var staticFiles embed.FS
 
+var (
+	version = "dev"
+	commit  = "unknown"
+)
+
 func main() {
+	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("auspex %s (%s)\n", version, commit)
+		os.Exit(0)
+	}
+
+	log.Printf("starting auspex %s (%s)", version, commit)
+
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
