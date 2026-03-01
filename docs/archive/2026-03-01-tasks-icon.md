@@ -3,7 +3,7 @@
 > Module: Windows Executable Metadata
 > Phase 6: Task Breakdown
 > Date: 01.03.2026
-> Status: Active
+> Status: Archived
 
 ---
 
@@ -30,7 +30,7 @@ Total: 3 tasks, single layer.
 ## Layer 1 — Implementation
 
 ### TASK-01 `versioninfo-meta.json`
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 012ad9f
 
 **Description:** Create `versioninfo-meta.json` containing all static fields for the Windows VERSIONINFO resource. This file holds project-level constants that do not change between releases. It is committed to the repository and edited manually only when project metadata changes (e.g. product name, copyright holder).
 
@@ -58,7 +58,7 @@ Total: 3 tasks, single layer.
 ---
 
 ### TASK-02 `tools/gen-versioninfo.go`
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 012ad9f
 
 **Description:** Create `tools/gen-versioninfo.go` — a Go script tagged `//go:build ignore` that reads `versioninfo-meta.json`, accepts a version string as a CLI argument, and writes the final `cmd/auspex/versioninfo.json` in the format expected by `goversioninfo`.
 
@@ -106,7 +106,7 @@ The script is invoked via `go run tools/gen-versioninfo.go <version>`. It must b
 ---
 
 ### TASK-03 Build integration
-**Status:** ✅ Done — commit TBD
+**Status:** ✅ Done — commit 012ad9f
 
 **Description:** Wire the generation into the Makefile and goreleaser. Add `goversioninfo` to CONTRIBUTING.md prerequisites. Add generated artifacts to `.gitignore`.
 
