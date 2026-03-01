@@ -1,4 +1,4 @@
-.PHONY: build test release release-notes clean clean-all
+.PHONY: build test release release-notes versioninfo clean clean-all
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,13 @@ frontend:
 sqlc:
 	sqlc generate
 
+# Generates cmd/auspex/versioninfo.json and cmd/auspex/*.syso.
+# VERSION must be set: make versioninfo VERSION=0.1.0
+versioninfo:
+	go run tools/gen-versioninfo.go $(VERSION)
+	goversioninfo -64 -o cmd/auspex/resource_windows_amd64.syso cmd/auspex/versioninfo.json
+	goversioninfo -arm -o cmd/auspex/resource_windows_arm64.syso cmd/auspex/versioninfo.json
+
 # Extracts the release notes for VERSION from CHANGELOG.md → docs/release-notes.md.
 # Can be called standalone to verify output: make release-notes VERSION=0.1.0
 VERSION ?= Unreleased
@@ -43,10 +50,13 @@ release: release-notes
 # ── Clean ─────────────────────────────────────────────────────────────────────
 
 clean:
-	go run tools/rm.go auspex auspex.exe docs/release-notes.md
+	go run tools/rm.go auspex auspex.exe
+	go run tools/rm.go docs/release-notes.md
+	go run tools/rm.go cmd/auspex/resource_windows_amd64.syso cmd/auspex/resource_windows_arm64.syso cmd/auspex/versioninfo.json
 	go run tools/rm.go -r cmd/auspex/web/dist
+	go run tools/rm.go -r dist
 	go run tools/touch.go cmd/auspex/web/dist/.gitkeep
 
 # Removes the database — all characters must be re-added via OAuth after this.
 clean-all: clean
-	go run tools/rm.go auspex.db
+	go run tools/rm.go auspex.db auspex.yaml

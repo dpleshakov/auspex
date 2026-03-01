@@ -1,0 +1,9 @@
+{
+  "company_name": "Dmitry Pleshakov",
+  "product_name": "Auspex",
+  "file_description": "EVE Online manufacturing monitor",
+  "internal_name": "auspex",
+  "original_filename": "auspex.exe",
+  "legal_copyright": "Copyright © 2026 Dmitry Pleshakov. MIT License. Not affiliated with CCP Games.",
+  "icon_path": "docs/assets/auspex.ico"
+}

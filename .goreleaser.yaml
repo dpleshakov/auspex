@@ -9,11 +9,15 @@ before:
   hooks:
     - make frontend
     - make sqlc
+    - make versioninfo VERSION={{ .Version }}
     - make release-notes VERSION={{ if .IsSnapshot }}Unreleased{{ else }}{{ .Version }}{{ end }}
 
 builds:
   - main: ./cmd/auspex/
     binary: auspex
+    ldflags:
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
 

@@ -1,3 +1,5 @@
+<img src="docs/assets/auspex-96.png" alt="Auspex">
+
 # Auspex
 
 A local desktop tool for EVE Online industrialists who manage multiple manufacturing characters. Auspex pulls data from the EVE ESI API and presents a unified dashboard of your BPO library and research job status across all characters and corporations.
@@ -96,4 +98,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build instructions, tooling requireme
 
 ## License
 
-This project is not affiliated with CCP Games. EVE Online and all related marks are property of CCP hf.
+Copyright © 2026 Dmitry Pleshakov. Licensed under the [MIT License](LICENSE).
+
+EVE Online and all related marks are property of CCP hf. This project is not affiliated with CCP Games.
