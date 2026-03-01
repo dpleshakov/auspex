@@ -15,6 +15,9 @@ before:
 builds:
   - main: ./cmd/auspex/
     binary: auspex
+    ldflags:
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
     goos: [linux, windows, darwin]
     goarch: [amd64, arm64]
 
