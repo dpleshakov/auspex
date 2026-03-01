@@ -10,6 +10,7 @@
 | sqlc | v2 | `go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest` |
 | golangci-lint | v2 | `go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest` |
 | goreleaser | v2 | `go install github.com/goreleaser/goreleaser/v2@latest` — required for release builds only |
+| goversioninfo | latest | `go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest` — required for Windows PE metadata |
 
 ## Building from Source
 
@@ -72,6 +73,7 @@ Open `http://localhost:5173`.
 | `clean` | Remove binary and rebuild `web/dist/` with only `.gitkeep` |
 | `clean-all` | `clean` + remove `auspex.db` |
 | `release-notes` | Extract release notes for a version from `CHANGELOG.md` |
+| `versioninfo` | Generate `cmd/auspex/versioninfo.json` and `resource.syso` for Windows builds |
 | `release` | Local snapshot build via goreleaser (no publish) |
 
 ## Schema Changes
@@ -107,7 +109,7 @@ git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-goreleaser runs `make frontend` and `make sqlc` automatically before building (defined in `.goreleaser.yaml` `before.hooks`). Node.js and sqlc must be installed on the release host. A `GITHUB_TOKEN` environment variable with `repo` scope is required.
+goreleaser runs `make frontend`, `make sqlc`, `make versioninfo`, and `make release-notes` automatically before building (defined in `.goreleaser.yaml` `before.hooks`). Node.js, sqlc, and goversioninfo must be installed on the release host. A `GITHUB_TOKEN` environment variable with `repo` scope is required.
 
 The release is created as a draft — review and publish manually on GitHub.
 

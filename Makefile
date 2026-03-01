@@ -1,4 +1,4 @@
-.PHONY: build test release release-notes clean clean-all
+.PHONY: build test release release-notes versioninfo clean clean-all
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +29,12 @@ frontend:
 # Internal target — used by .goreleaser.yaml hooks, do not call directly.
 sqlc:
 	sqlc generate
+
+# Generates cmd/auspex/versioninfo.json and cmd/auspex/resource.syso.
+# VERSION must be set: make versioninfo VERSION=0.1.0
+versioninfo:
+	go run tools/gen-versioninfo.go $(VERSION)
+	goversioninfo -64 -o cmd/auspex/resource.syso cmd/auspex/versioninfo.json
 
 # Extracts the release notes for VERSION from CHANGELOG.md → docs/release-notes.md.
 # Can be called standalone to verify output: make release-notes VERSION=0.1.0
