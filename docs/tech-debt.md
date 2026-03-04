@@ -147,8 +147,9 @@ Known issues and deferred decisions.
 - File: `internal/api/response.go`
 
 #### TD-18 `Sticky blueprint table header overlaps sticky app header`
-- Fixed: 2026-03-03
-- `.bp-table__th` had `position: sticky; top: 0`, which caused the table header to scroll behind the sticky `.app-header` when the user scrolled down. Fix: changed `top: 0` to `top: 51px` (approximate rendered height of `.app-header`). Added `z-index: 1` so the table header renders above table rows during horizontal scroll.
+- Fixed: 2026-03-04 (previous fix reverted — introduced regression)
+- `.bp-table__th` has `position: sticky; top: 0` and `z-index: 1`. The `z-index` ensures the header renders above cells during horizontal scroll. `top: 0` is correct: because `.bp-table-wrapper` has `overflow-x: auto`, it becomes the sticky scroll container for `<th>` per CSS spec. The wrapper does not scroll vertically, so sticky never activates and the element behaves as `position: relative; top: 0` (no offset). Changing `top` to `51px` caused a regression — the header was permanently shifted 51px down into data rows. The scenario of the header conflicting with `.app-header` does not occur in this layout.
+- Note: sticky table header does not actually activate during page scroll due to `overflow-x: auto` on the wrapper. If true sticky-header behaviour is wanted, the layout needs to be restructured (e.g. make the wrapper height-constrained and scroll vertically, or hoist `overflow-x` to a higher container).
 - File: `cmd/auspex/web/src/index.css`
 
 #### TD-19 `Force-refresh poll runs indefinitely when sync_state is empty`

@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Blueprint table header no longer overlaps data rows when the page is scrolled.
+
 ---
 
 ## [0.1.0] — 2026-02-28
