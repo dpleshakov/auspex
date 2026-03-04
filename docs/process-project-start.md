@@ -59,7 +59,7 @@ This is the first section of `architecture.md`. The file is created here but not
 **What to do:**
 Design the high-level architecture — modules, their responsibilities, and interactions. Define key dependency interfaces between modules. Describe data flows between components.
 
-**Do not include** API contracts or database schema here — those belong in `api-docs.md` and will be created during feature development.
+**Do not include** API contracts, database schema, or other technical reference details here — those belong in `technical-reference.md` and will be created during feature development.
 
 **Output:** "Architecture" section in `architecture.md`
 - Diagrams (Mermaid or ASCII)
@@ -85,8 +85,7 @@ Design the high-level architecture — modules, their responsibilities, and inte
 Based on the architecture, define the directory and file structure of the project. Then create the actual skeleton in the repository — directories, empty files, base configs.
 
 **Output:**
-- "Project Structure" section in `architecture.md` — description of each directory and file
-- Real file structure in the repository
+- "Project Structure" section in `architecture.md` — the principle of code organisation and top-level directories with rationale. No individual files, no subdirectories beyond one level deep. This section changes only when a new feature introduces a new top-level directory.
 - Base configs: linter, formatter, `.gitignore`, example config with credentials placeholder, `CHANGELOG.md` (see `changelog-guide.md` for format)
 
 After this step, `architecture.md` is complete. The repository has a working skeleton and development can begin.
