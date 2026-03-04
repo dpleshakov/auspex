@@ -1,4 +1,89 @@
-# Auspex — API Documentation
+# Auspex — Technical Reference
+
+> Date: 04.03.2026
+> Status: Current
+
+---
+
+## Database Schema
+
+```sql
+-- EVE universe reference data (populated lazily on first encounter)
+CREATE TABLE eve_categories (
+    id    INTEGER PRIMARY KEY,  -- EVE category_id
+    name  TEXT NOT NULL
+);
+
+CREATE TABLE eve_groups (
+    id          INTEGER PRIMARY KEY,  -- EVE group_id
+    category_id INTEGER NOT NULL REFERENCES eve_categories(id),
+    name        TEXT NOT NULL
+);
+
+CREATE TABLE eve_types (
+    id       INTEGER PRIMARY KEY,  -- EVE type_id
+    group_id INTEGER NOT NULL REFERENCES eve_groups(id),
+    name     TEXT NOT NULL
+);
+
+-- Authorized characters (one OAuth token per character)
+CREATE TABLE characters (
+    id            INTEGER PRIMARY KEY,  -- EVE character_id
+    name          TEXT NOT NULL,
+    access_token  TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_expiry  DATETIME NOT NULL,
+    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tracked corporations (accessed via delegate character)
+CREATE TABLE corporations (
+    id           INTEGER PRIMARY KEY,  -- EVE corporation_id
+    name         TEXT NOT NULL,
+    delegate_id  INTEGER NOT NULL REFERENCES characters(id),
+    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- BPO library (all characters + corporations combined)
+CREATE TABLE blueprints (
+    id          INTEGER PRIMARY KEY,  -- EVE item_id
+    owner_type  TEXT NOT NULL,        -- 'character' | 'corporation'
+    owner_id    INTEGER NOT NULL,
+    type_id     INTEGER NOT NULL REFERENCES eve_types(id),
+    location_id INTEGER NOT NULL,
+    me_level    INTEGER NOT NULL DEFAULT 0,
+    te_level    INTEGER NOT NULL DEFAULT 0,
+    updated_at  DATETIME NOT NULL
+);
+
+-- Active and ready research jobs
+CREATE TABLE jobs (
+    id           INTEGER PRIMARY KEY,  -- EVE job_id
+    blueprint_id INTEGER NOT NULL REFERENCES blueprints(id),
+    owner_type   TEXT NOT NULL,        -- 'character' | 'corporation'
+    owner_id     INTEGER NOT NULL,
+    installer_id INTEGER NOT NULL,     -- character_id who started the job
+    activity     TEXT NOT NULL,        -- 'me_research' | 'te_research' | 'copying'
+    status       TEXT NOT NULL,        -- 'active' | 'ready'
+    start_date   DATETIME NOT NULL,
+    end_date     DATETIME NOT NULL,
+    updated_at   DATETIME NOT NULL
+);
+
+-- ESI cache state per subject per endpoint
+CREATE TABLE sync_state (
+    owner_type  TEXT NOT NULL,
+    owner_id    INTEGER NOT NULL,
+    endpoint    TEXT NOT NULL,      -- 'blueprints' | 'jobs'
+    last_sync   DATETIME NOT NULL,
+    cache_until DATETIME NOT NULL,
+    PRIMARY KEY (owner_type, owner_id, endpoint)
+);
+```
+
+---
+
+## API Reference
 
 All API endpoints are served under `http://localhost:PORT` (default port: 8080).
 
@@ -14,15 +99,15 @@ Errors are returned as:
 
 ---
 
-## Authentication
+### Authentication
 
 Auspex uses EVE SSO OAuth2. Authentication is browser-based — there are no API keys or session tokens for the REST API. The backend stores OAuth tokens per character in SQLite and uses them internally for ESI requests.
 
 ---
 
-## Characters
+### Characters
 
-### `GET /api/characters`
+#### `GET /api/characters`
 
 Returns all characters that have been added via the OAuth2 flow.
 
@@ -48,7 +133,7 @@ Returns an empty array `[]` if no characters have been added.
 
 ---
 
-### `DELETE /api/characters/{id}`
+#### `DELETE /api/characters/{id}`
 
 Removes a character and all associated data (blueprints, jobs, sync state).
 
@@ -70,9 +155,9 @@ Removes a character and all associated data (blueprints, jobs, sync state).
 
 ---
 
-## Corporations
+### Corporations
 
-### `GET /api/corporations`
+#### `GET /api/corporations`
 
 Returns all tracked corporations.
 
@@ -100,7 +185,7 @@ Returns all tracked corporations.
 
 ---
 
-### `POST /api/corporations`
+#### `POST /api/corporations`
 
 Adds a corporation to be tracked. The delegate character must already be added via OAuth.
 
@@ -130,7 +215,7 @@ Adds a corporation to be tracked. The delegate character must already be added v
 
 ---
 
-### `DELETE /api/corporations/{id}`
+#### `DELETE /api/corporations/{id}`
 
 Removes a corporation and all associated data (blueprints, jobs, sync state).
 
@@ -150,9 +235,9 @@ Removes a corporation and all associated data (blueprints, jobs, sync state).
 
 ---
 
-## Blueprints
+### Blueprints
 
-### `GET /api/blueprints`
+#### `GET /api/blueprints`
 
 Returns the BPO library. All query parameters are optional and combinable.
 
@@ -245,9 +330,9 @@ Returns the BPO library. All query parameters are optional and combinable.
 
 ---
 
-## Jobs Summary
+### Jobs Summary
 
-### `GET /api/jobs/summary`
+#### `GET /api/jobs/summary`
 
 Returns aggregate counts and per-character slot usage for the dashboard summary bar.
 
@@ -282,9 +367,9 @@ Returns aggregate counts and per-character slot usage for the dashboard summary 
 
 ---
 
-## Sync
+### Sync
 
-### `POST /api/sync`
+#### `POST /api/sync`
 
 Sends a force-refresh signal to the background sync worker. Returns immediately without waiting for the sync to complete.
 
@@ -294,7 +379,7 @@ Use `GET /api/sync/status` to poll for completion.
 
 ---
 
-### `GET /api/sync/status`
+#### `GET /api/sync/status`
 
 Returns the current sync state for all tracked subjects (characters and corporations) and endpoints.
 
@@ -334,11 +419,11 @@ Returns an empty array `[]` if no characters have been added yet.
 
 ---
 
-## OAuth2 (EVE SSO)
+### OAuth2 (EVE SSO)
 
 These endpoints are browser-navigation endpoints, not JSON API endpoints.
 
-### `GET /auth/eve/login`
+#### `GET /auth/eve/login`
 
 Redirects the browser to the EVE SSO authorization page. The user selects a character and approves the requested scopes.
 
@@ -346,7 +431,7 @@ Redirects the browser to the EVE SSO authorization page. The user selects a char
 
 ---
 
-### `GET /auth/eve/callback`
+#### `GET /auth/eve/callback`
 
 OAuth2 callback endpoint. EVE SSO redirects here after the user completes authorization.
 

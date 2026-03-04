@@ -9,13 +9,15 @@ This process repeats for every feature — including the initial MVP features. T
 | Step | Conversation | Output |
 |------|-------------|--------|
 | 1 | Task breakdown | `YYYY-MM-DD-tasks-{feature}.md` |
-| 2–N | One conversation per task | Working committed code + updated `api-docs.md` |
+| 2–N | One conversation per task | Working committed code + updated `technical-reference.md` |
 
 ---
 
 ## Step 1 — Task Breakdown
 
-**Input:** `architecture.md` + `api-docs.md` (if it exists)
+**Input:** `architecture.md` + `technical-reference.md` (if it exists)
+
+If `technical-reference.md` does not yet exist, it is created during this conversation. It contains API endpoints, database schema, and any other technical details that need to be stable before tasks can be written.
 
 **What to do:**
 In conversation with AI, break the feature into tasks. AI proposes the task structure, you agree or adjust. The goal is a complete, ordered list where every task is atomic — achievable in one AI conversation (roughly 30–100 lines of code).
@@ -37,7 +39,7 @@ Every tasks file contains four types of tasks. AI places them during breakdown �
 **Review tasks** — placed after each logical block (e.g. after all files in `auth/` are done). Each review task covers:
 - Code: security, error handling, readability, obvious performance issues
 - Security checklist: input validation, no tokens in logs, errors do not expose internal details, dependency vulnerability check (`npm audit`, `pip audit`, `go audit`, or equivalent for your stack)
-- Documentation: does `api-docs.md` reflect what was actually built? Update if not. Does `architecture.md` need updating?
+- Documentation: does `technical-reference.md` reflect what was actually built? Update if not. Does `architecture.md` need updating?
 
 **Docs task** — always the last task in the file. Covers:
 - User-facing documentation (README, help, guides)
@@ -105,7 +107,7 @@ Review the logical block that preceded this task. Work through the checklist:
 - Security: input validation, no secrets in logs or responses, dependency audit
 - Error handling: no silently ignored errors, no internal details in HTTP responses
 - Readability: nothing obviously confusing
-- Documentation: update `api-docs.md` and `architecture.md` if they do not match reality
+- Documentation: update `technical-reference.md` and `architecture.md` if they do not match reality
 
 Commit any fixes and documentation updates.
 
