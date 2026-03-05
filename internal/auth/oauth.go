@@ -31,6 +31,7 @@ const (
 	eveAuthURL   = "https://login.eveonline.com/v2/oauth/authorize"
 	eveTokenURL  = "https://login.eveonline.com/v2/oauth/token"
 	eveVerifyURL = "https://esi.evetech.net/verify"
+	esiBaseURL   = "https://esi.evetech.net/latest"
 )
 
 // eveScopes are the ESI OAuth2 scopes required for Auspex MVP.
@@ -47,6 +48,16 @@ type verifyResponse struct {
 	CharacterName string `json:"CharacterName"`
 }
 
+// characterInfoResponse is the relevant subset of GET /characters/{id}/.
+type characterInfoResponse struct {
+	CorporationID int64 `json:"corporation_id"`
+}
+
+// corporationInfoResponse is the relevant subset of GET /corporations/{id}/.
+type corporationInfoResponse struct {
+	Name string `json:"name"`
+}
+
 // Provider manages the EVE SSO OAuth2 authorization code flow.
 // It is safe for concurrent use.
 type Provider struct {
@@ -54,6 +65,7 @@ type Provider struct {
 	store      store.Querier
 	httpClient *http.Client
 	verifyURL  string
+	esiBaseURL string
 	states     map[string]struct{}
 	mu         sync.Mutex
 }
@@ -79,6 +91,7 @@ func NewProvider(clientID, clientSecret, callbackURL string, q store.Querier, ht
 		store:      q,
 		httpClient: httpClient,
 		verifyURL:  eveVerifyURL,
+		esiBaseURL: esiBaseURL,
 		states:     make(map[string]struct{}),
 	}
 }
@@ -125,17 +138,93 @@ func (p *Provider) HandleCallback(ctx context.Context, code, state string) (int6
 		return 0, fmt.Errorf("verifying character: %w", err)
 	}
 
+	charInfo, err := p.callCharacterInfo(ctx, char.CharacterID)
+	if err != nil {
+		return 0, fmt.Errorf("fetching character info for %d: %w", char.CharacterID, err)
+	}
+
+	corpInfo, err := p.callCorporationInfo(ctx, charInfo.CorporationID)
+	if err != nil {
+		return 0, fmt.Errorf("fetching corporation info for %d: %w", charInfo.CorporationID, err)
+	}
+
 	if err := p.store.UpsertCharacter(ctx, store.UpsertCharacterParams{
-		ID:           char.CharacterID,
-		Name:         char.CharacterName,
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		TokenExpiry:  token.Expiry,
+		ID:              char.CharacterID,
+		Name:            char.CharacterName,
+		AccessToken:     token.AccessToken,
+		RefreshToken:    token.RefreshToken,
+		TokenExpiry:     token.Expiry,
+		CorporationID:   charInfo.CorporationID,
+		CorporationName: corpInfo.Name,
 	}); err != nil {
 		return 0, fmt.Errorf("saving character %d: %w", char.CharacterID, err)
 	}
 
 	return char.CharacterID, nil
+}
+
+// callCharacterInfo fetches the character's public info (corporation_id) from ESI.
+func (p *Provider) callCharacterInfo(ctx context.Context, characterID int64) (characterInfoResponse, error) {
+	url := fmt.Sprintf("%s/characters/%d/", p.esiBaseURL, characterID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		return characterInfoResponse{}, fmt.Errorf("building character info request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := p.httpClient.Do(req) //nolint:gosec // URL is constructed from a hardcoded base URL + validated character ID
+	if err != nil {
+		return characterInfoResponse{}, fmt.Errorf("calling character info: %w", err)
+	}
+	defer resp.Body.Close() //nolint:errcheck // closing response body on read path
+
+	if resp.StatusCode != http.StatusOK {
+		return characterInfoResponse{}, fmt.Errorf("character info returned HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return characterInfoResponse{}, fmt.Errorf("reading character info response: %w", err)
+	}
+
+	var v characterInfoResponse
+	if err := json.Unmarshal(body, &v); err != nil {
+		return characterInfoResponse{}, fmt.Errorf("parsing character info response: %w", err)
+	}
+
+	return v, nil
+}
+
+// callCorporationInfo fetches the corporation's public info (name) from ESI.
+func (p *Provider) callCorporationInfo(ctx context.Context, corporationID int64) (corporationInfoResponse, error) {
+	url := fmt.Sprintf("%s/corporations/%d/", p.esiBaseURL, corporationID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		return corporationInfoResponse{}, fmt.Errorf("building corporation info request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := p.httpClient.Do(req) //nolint:gosec // URL is constructed from a hardcoded base URL + validated corporation ID
+	if err != nil {
+		return corporationInfoResponse{}, fmt.Errorf("calling corporation info: %w", err)
+	}
+	defer resp.Body.Close() //nolint:errcheck // closing response body on read path
+
+	if resp.StatusCode != http.StatusOK {
+		return corporationInfoResponse{}, fmt.Errorf("corporation info returned HTTP %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return corporationInfoResponse{}, fmt.Errorf("reading corporation info response: %w", err)
+	}
+
+	var v corporationInfoResponse
+	if err := json.Unmarshal(body, &v); err != nil {
+		return corporationInfoResponse{}, fmt.Errorf("parsing corporation info response: %w", err)
+	}
+
+	return v, nil
 }
 
 // callVerify calls EVE SSO /verify with the access token and returns character info.

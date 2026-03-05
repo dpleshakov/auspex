@@ -182,3 +182,11 @@ func (m *mockQuerier) UpsertJob(_ context.Context, _ store.UpsertJobParams) erro
 func (m *mockQuerier) UpsertSyncState(_ context.Context, _ store.UpsertSyncStateParams) error {
 	return nil
 }
+
+func (m *mockQuerier) ListCharactersByCorporation(_ context.Context, _ int64) ([]store.Character, error) {
+	return nil, nil
+}
+
+func (m *mockQuerier) UpdateSyncStateError(_ context.Context, _ store.UpdateSyncStateErrorParams) error {
+	return nil
+}

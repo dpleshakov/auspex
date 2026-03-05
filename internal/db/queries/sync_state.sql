@@ -2,8 +2,12 @@
 -- See https://docs.sqlc.dev for query annotation syntax.
 
 -- name: GetSyncState :one
-SELECT owner_type, owner_id, endpoint, last_sync, cache_until
+SELECT owner_type, owner_id, endpoint, last_sync, cache_until, last_error
 FROM sync_state
+WHERE owner_type = ? AND owner_id = ? AND endpoint = ?;
+
+-- name: UpdateSyncStateError :exec
+UPDATE sync_state SET last_error = ?
 WHERE owner_type = ? AND owner_id = ? AND endpoint = ?;
 
 -- name: UpsertSyncState :exec

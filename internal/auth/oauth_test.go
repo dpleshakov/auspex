@@ -20,6 +20,24 @@ type mockQuerier struct {
 	upsertParams store.UpsertCharacterParams
 }
 
+// addCharCorpHandlers registers /characters/{id}/ and /corporations/{id}/ handlers
+// on the given mux so that HandleCallback can fetch corporation info.
+func addCharCorpHandlers(t *testing.T, mux *http.ServeMux, corporationID int64, corporationName string) {
+	t.Helper()
+	mux.HandleFunc("/characters/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(characterInfoResponse{CorporationID: corporationID}); err != nil {
+			t.Fatalf("encode character info: %v", err)
+		}
+	})
+	mux.HandleFunc("/corporations/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(corporationInfoResponse{Name: corporationName}); err != nil {
+			t.Fatalf("encode corporation info: %v", err)
+		}
+	})
+}
+
 func (m *mockQuerier) UpsertCharacter(ctx context.Context, arg store.UpsertCharacterParams) error {
 	m.upsertCalled = true
 	m.upsertParams = arg
@@ -92,7 +110,7 @@ func TestHandleCallback_InvalidState(t *testing.T) {
 
 // TestHandleCallback_StateConsumedOnce verifies that a state cannot be reused.
 func TestHandleCallback_StateConsumedOnce(t *testing.T) {
-	// Set up a server that handles token exchange and /verify.
+	// Set up a server that handles token exchange, /verify, and ESI endpoints.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -112,6 +130,7 @@ func TestHandleCallback_StateConsumedOnce(t *testing.T) {
 			t.Fatalf("encode: %v", err)
 		}
 	})
+	addCharCorpHandlers(t, mux, 500001, "TestCorp")
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
@@ -119,6 +138,7 @@ func TestHandleCallback_StateConsumedOnce(t *testing.T) {
 	p := newTestProvider(t, ts.Client(), mq)
 	p.conf.Endpoint.TokenURL = ts.URL + "/token"
 	p.verifyURL = ts.URL + "/verify"
+	p.esiBaseURL = ts.URL
 
 	_, err := p.GenerateAuthURL()
 	if err != nil {
@@ -217,7 +237,7 @@ func TestCallVerify_ZeroCharacterID(t *testing.T) {
 }
 
 // TestHandleCallback_ValidFlow exercises the full happy path:
-// valid state → token exchange → /verify → UpsertCharacter.
+// valid state → token exchange → /verify → character info → corporation info → UpsertCharacter.
 func TestHandleCallback_ValidFlow(t *testing.T) {
 	mq := &mockQuerier{}
 
@@ -244,12 +264,14 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 			t.Fatalf("encode: %v", err)
 		}
 	})
+	addCharCorpHandlers(t, mux, 98000001, "Caldari State")
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
 	p := newTestProvider(t, ts.Client(), mq)
 	p.conf.Endpoint.TokenURL = ts.URL + "/token"
 	p.verifyURL = ts.URL + "/verify"
+	p.esiBaseURL = ts.URL
 
 	// Seed a valid state.
 	if _, err := p.GenerateAuthURL(); err != nil {
@@ -280,6 +302,12 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 	}
 	if mq.upsertParams.RefreshToken != "refresh-xyz" {
 		t.Errorf("upserted refresh token = %q, want %q", mq.upsertParams.RefreshToken, "refresh-xyz")
+	}
+	if mq.upsertParams.CorporationID != 98000001 {
+		t.Errorf("upserted corporation_id = %d, want 98000001", mq.upsertParams.CorporationID)
+	}
+	if mq.upsertParams.CorporationName != "Caldari State" {
+		t.Errorf("upserted corporation_name = %q, want %q", mq.upsertParams.CorporationName, "Caldari State")
 	}
 
 	// State must be consumed — second call must fail.
