@@ -163,6 +163,12 @@ func (m *mockQuerier) UpsertSyncState(_ context.Context, arg store.UpsertSyncSta
 	}
 	panic("unexpected call to UpsertSyncState")
 }
+func (m *mockQuerier) ListCharactersByCorporation(_ context.Context, _ int64) ([]store.Character, error) {
+	panic("unexpected call to ListCharactersByCorporation")
+}
+func (m *mockQuerier) UpdateSyncStateError(_ context.Context, _ store.UpdateSyncStateErrorParams) error {
+	panic("unexpected call to UpdateSyncStateError")
+}
 
 // Compile-time assertion: *mockQuerier must satisfy store.Querier.
 var _ store.Querier = (*mockQuerier)(nil)

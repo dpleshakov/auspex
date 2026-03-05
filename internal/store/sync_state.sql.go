@@ -26,7 +26,7 @@ func (q *Queries) DeleteSyncStateByOwner(ctx context.Context, arg DeleteSyncStat
 
 const getSyncState = `-- name: GetSyncState :one
 
-SELECT owner_type, owner_id, endpoint, last_sync, cache_until
+SELECT owner_type, owner_id, endpoint, last_sync, cache_until, last_error
 FROM sync_state
 WHERE owner_type = ? AND owner_id = ? AND endpoint = ?
 `
@@ -48,8 +48,31 @@ func (q *Queries) GetSyncState(ctx context.Context, arg GetSyncStateParams) (Syn
 		&i.Endpoint,
 		&i.LastSync,
 		&i.CacheUntil,
+		&i.LastError,
 	)
 	return i, err
+}
+
+const updateSyncStateError = `-- name: UpdateSyncStateError :exec
+UPDATE sync_state SET last_error = ?
+WHERE owner_type = ? AND owner_id = ? AND endpoint = ?
+`
+
+type UpdateSyncStateErrorParams struct {
+	LastError *string
+	OwnerType string
+	OwnerID   int64
+	Endpoint  string
+}
+
+func (q *Queries) UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error {
+	_, err := q.db.ExecContext(ctx, updateSyncStateError,
+		arg.LastError,
+		arg.OwnerType,
+		arg.OwnerID,
+		arg.Endpoint,
+	)
+	return err
 }
 
 const listSyncStatus = `-- name: ListSyncStatus :many

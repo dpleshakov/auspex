@@ -20,12 +20,14 @@ type Blueprint struct {
 }
 
 type Character struct {
-	ID           int64
-	Name         string
-	AccessToken  string
-	RefreshToken string
-	TokenExpiry  time.Time
-	CreatedAt    time.Time
+	ID              int64
+	Name            string
+	AccessToken     string
+	RefreshToken    string
+	TokenExpiry     time.Time
+	CreatedAt       time.Time
+	CorporationID   int64
+	CorporationName string
 }
 
 type Corporation struct {
@@ -71,4 +73,5 @@ type SyncState struct {
 	Endpoint   string
 	LastSync   time.Time
 	CacheUntil time.Time
+	LastError  *string
 }

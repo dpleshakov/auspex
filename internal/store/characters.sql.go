@@ -21,7 +21,7 @@ func (q *Queries) DeleteCharacter(ctx context.Context, id int64) error {
 
 const getCharacter = `-- name: GetCharacter :one
 
-SELECT id, name, access_token, refresh_token, token_expiry, created_at
+SELECT id, name, access_token, refresh_token, token_expiry, created_at, corporation_id, corporation_name
 FROM characters
 WHERE id = ?
 `
@@ -38,12 +38,14 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (Character, error)
 		&i.RefreshToken,
 		&i.TokenExpiry,
 		&i.CreatedAt,
+		&i.CorporationID,
+		&i.CorporationName,
 	)
 	return i, err
 }
 
 const listCharacters = `-- name: ListCharacters :many
-SELECT id, name, access_token, refresh_token, token_expiry, created_at
+SELECT id, name, access_token, refresh_token, token_expiry, created_at, corporation_id, corporation_name
 FROM characters
 ORDER BY name
 `
@@ -64,6 +66,47 @@ func (q *Queries) ListCharacters(ctx context.Context) ([]Character, error) {
 			&i.RefreshToken,
 			&i.TokenExpiry,
 			&i.CreatedAt,
+			&i.CorporationID,
+			&i.CorporationName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCharactersByCorporation = `-- name: ListCharactersByCorporation :many
+SELECT id, name, access_token, refresh_token, token_expiry, created_at, corporation_id, corporation_name
+FROM characters
+WHERE corporation_id = ?
+ORDER BY name
+`
+
+func (q *Queries) ListCharactersByCorporation(ctx context.Context, corporationID int64) ([]Character, error) {
+	rows, err := q.db.QueryContext(ctx, listCharactersByCorporation, corporationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Character
+	for rows.Next() {
+		var i Character
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.AccessToken,
+			&i.RefreshToken,
+			&i.TokenExpiry,
+			&i.CreatedAt,
+			&i.CorporationID,
+			&i.CorporationName,
 		); err != nil {
 			return nil, err
 		}
@@ -79,21 +122,25 @@ func (q *Queries) ListCharacters(ctx context.Context) ([]Character, error) {
 }
 
 const upsertCharacter = `-- name: UpsertCharacter :exec
-INSERT INTO characters (id, name, access_token, refresh_token, token_expiry)
-VALUES (?, ?, ?, ?, ?)
+INSERT INTO characters (id, name, access_token, refresh_token, token_expiry, corporation_id, corporation_name)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    name          = excluded.name,
-    access_token  = excluded.access_token,
-    refresh_token = excluded.refresh_token,
-    token_expiry  = excluded.token_expiry
+    name             = excluded.name,
+    access_token     = excluded.access_token,
+    refresh_token    = excluded.refresh_token,
+    token_expiry     = excluded.token_expiry,
+    corporation_id   = excluded.corporation_id,
+    corporation_name = excluded.corporation_name
 `
 
 type UpsertCharacterParams struct {
-	ID           int64
-	Name         string
-	AccessToken  string
-	RefreshToken string
-	TokenExpiry  time.Time
+	ID              int64
+	Name            string
+	AccessToken     string
+	RefreshToken    string
+	TokenExpiry     time.Time
+	CorporationID   int64
+	CorporationName string
 }
 
 func (q *Queries) UpsertCharacter(ctx context.Context, arg UpsertCharacterParams) error {
@@ -103,6 +150,8 @@ func (q *Queries) UpsertCharacter(ctx context.Context, arg UpsertCharacterParams
 		arg.AccessToken,
 		arg.RefreshToken,
 		arg.TokenExpiry,
+		arg.CorporationID,
+		arg.CorporationName,
 	)
 	return err
 }
