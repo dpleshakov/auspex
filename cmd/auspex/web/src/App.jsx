@@ -14,6 +14,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState('blueprints')
 
   const syncPollRef = useRef(null)
 
@@ -93,11 +94,8 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <span className="app-header__title">Auspex</span>
-        <div className="app-header__actions">
-          <a className="app-add-char-link" href="/auth/eve/login">
-            + Add character
-          </a>
+        <div className="app-header__left">
+          <span className="app-header__title">Auspex</span>
           <button
             className={`app-refresh-btn${isRefreshing ? ' app-refresh-btn--refreshing' : ''}`}
             onClick={handleRefresh}
@@ -105,6 +103,25 @@ export default function App() {
           >
             {isRefreshing ? 'Refreshing…' : 'Refresh'}
           </button>
+          <nav className="app-tabs">
+            <button
+              className={`app-tab${activeTab === 'blueprints' ? ' app-tab--active' : ''}`}
+              onClick={() => setActiveTab('blueprints')}
+            >
+              Blueprints
+            </button>
+            <button
+              className={`app-tab${activeTab === 'characters' ? ' app-tab--active' : ''}`}
+              onClick={() => setActiveTab('characters')}
+            >
+              Characters
+            </button>
+          </nav>
+        </div>
+        <div className="app-header__actions">
+          <a className="app-add-char-link" href="/auth/eve/login">
+            + Add character
+          </a>
         </div>
       </header>
 
@@ -112,12 +129,14 @@ export default function App() {
         <div className="app-loading">Loading…</div>
       ) : error ? (
         <div className="app-error">Error: {error}</div>
-      ) : (
+      ) : activeTab === 'blueprints' ? (
         <>
           <SummaryBar summary={summary} />
           <CharactersSection summary={summary} />
           <BlueprintTable blueprints={blueprints} />
         </>
+      ) : (
+        <p>Characters</p>
       )}
     </div>
   )
