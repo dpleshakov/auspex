@@ -14,11 +14,22 @@ import (
 
 func TestGetCharacters_ReturnsJSON(t *testing.T) {
 	createdAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	syncErrMsg := "ESI 503: service unavailable"
 	mock := &mockQuerier{
-		ListCharactersFn: func(_ context.Context) ([]store.Character, error) {
-			return []store.Character{
-				{ID: 1, Name: "Alpha", CreatedAt: createdAt},
-				{ID: 2, Name: "Beta", CreatedAt: createdAt},
+		ListCharactersWithMetaFn: func(_ context.Context) ([]store.ListCharactersWithMetaRow, error) {
+			return []store.ListCharactersWithMetaRow{
+				{
+					ID: 1, Name: "Alpha", CorporationID: 98765432,
+					CorporationName: "Test Corp", IsDelegate: 1,
+					SyncError: syncErrMsg,
+					CreatedAt: createdAt,
+				},
+				{
+					ID: 2, Name: "Beta", CorporationID: 98765432,
+					CorporationName: "Test Corp", IsDelegate: 0,
+					SyncError: nil,
+					CreatedAt: createdAt,
+				},
 			}, nil
 		},
 	}
@@ -41,6 +52,18 @@ func TestGetCharacters_ReturnsJSON(t *testing.T) {
 	if got[0]["name"] != "Alpha" {
 		t.Errorf("expected name Alpha, got %v", got[0]["name"])
 	}
+	if got[0]["is_delegate"] != true {
+		t.Errorf("expected is_delegate=true for Alpha, got %v", got[0]["is_delegate"])
+	}
+	if got[0]["sync_error"] != syncErrMsg {
+		t.Errorf("expected sync_error=%q, got %v", syncErrMsg, got[0]["sync_error"])
+	}
+	if got[1]["is_delegate"] != false {
+		t.Errorf("expected is_delegate=false for Beta, got %v", got[1]["is_delegate"])
+	}
+	if got[1]["sync_error"] != nil {
+		t.Errorf("expected sync_error=null for Beta, got %v", got[1]["sync_error"])
+	}
 	// Tokens must never appear in the response.
 	for _, field := range []string{"access_token", "refresh_token", "token_expiry"} {
 		if _, ok := got[0][field]; ok {
@@ -50,7 +73,12 @@ func TestGetCharacters_ReturnsJSON(t *testing.T) {
 }
 
 func TestGetCharacters_EmptyList(t *testing.T) {
-	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
+	mock := &mockQuerier{
+		ListCharactersWithMetaFn: func(_ context.Context) ([]store.ListCharactersWithMetaRow, error) {
+			return nil, nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
 
 	req := httptest.NewRequest(http.MethodGet, "/api/characters", http.NoBody)
 	rr := httptest.NewRecorder()
@@ -71,7 +99,7 @@ func TestGetCharacters_EmptyList(t *testing.T) {
 
 func TestGetCharacters_DBError(t *testing.T) {
 	mock := &mockQuerier{
-		ListCharactersFn: func(_ context.Context) ([]store.Character, error) {
+		ListCharactersWithMetaFn: func(_ context.Context) ([]store.ListCharactersWithMetaRow, error) {
 			return nil, errors.New("db error")
 		},
 	}

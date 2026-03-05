@@ -21,11 +21,12 @@ type mockQuerier struct {
 	getSyncFunc   func(store.GetSyncStateParams) (store.SyncState, error)
 
 	// TASK-10: syncSubject
-	upsertBlueprintFunc   func(store.UpsertBlueprintParams) error
-	upsertJobFunc         func(store.UpsertJobParams) error
-	listJobIDsByOwnerFunc func(store.ListJobIDsByOwnerParams) ([]int64, error)
-	deleteJobByIDFunc     func(int64) error
-	upsertSyncStateFunc   func(store.UpsertSyncStateParams) error
+	upsertBlueprintFunc      func(store.UpsertBlueprintParams) error
+	upsertJobFunc            func(store.UpsertJobParams) error
+	listJobIDsByOwnerFunc    func(store.ListJobIDsByOwnerParams) ([]int64, error)
+	deleteJobByIDFunc        func(int64) error
+	upsertSyncStateFunc      func(store.UpsertSyncStateParams) error
+	updateSyncStateErrorFunc func(store.UpdateSyncStateErrorParams) error
 
 	// TASK-11: type resolution
 	listBlueprintTypeIDsByOwnerFunc func(store.ListBlueprintTypeIDsByOwnerParams) ([]int64, error)
@@ -169,8 +170,14 @@ func (m *mockQuerier) UpsertSyncState(_ context.Context, arg store.UpsertSyncSta
 func (m *mockQuerier) ListCharactersByCorporation(_ context.Context, _ int64) ([]store.Character, error) {
 	panic("unexpected call to ListCharactersByCorporation")
 }
-func (m *mockQuerier) UpdateSyncStateError(_ context.Context, _ store.UpdateSyncStateErrorParams) error {
-	panic("unexpected call to UpdateSyncStateError")
+func (m *mockQuerier) ListCharactersWithMeta(_ context.Context) ([]store.ListCharactersWithMetaRow, error) {
+	panic("unexpected call to ListCharactersWithMeta")
+}
+func (m *mockQuerier) UpdateSyncStateError(_ context.Context, arg store.UpdateSyncStateErrorParams) error {
+	if m.updateSyncStateErrorFunc != nil {
+		return m.updateSyncStateErrorFunc(arg)
+	}
+	return nil
 }
 func (m *mockQuerier) UpdateCorporationDelegate(_ context.Context, _ store.UpdateCorporationDelegateParams) error {
 	panic("unexpected call to UpdateCorporationDelegate")

@@ -11,6 +11,7 @@ import (
 // otherwise it returns the zero value and nil error.
 type mockQuerier struct {
 	ListCharactersFn              func(ctx context.Context) ([]store.Character, error)
+	ListCharactersWithMetaFn      func(ctx context.Context) ([]store.ListCharactersWithMetaRow, error)
 	DeleteCharacterFn             func(ctx context.Context, id int64) error
 	DeleteBlueprintsByOwnerFn     func(ctx context.Context, arg store.DeleteBlueprintsByOwnerParams) error
 	DeleteJobsByOwnerFn           func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error
@@ -34,6 +35,13 @@ type mockQuerier struct {
 func (m *mockQuerier) ListCharacters(ctx context.Context) ([]store.Character, error) {
 	if m.ListCharactersFn != nil {
 		return m.ListCharactersFn(ctx)
+	}
+	return nil, nil
+}
+
+func (m *mockQuerier) ListCharactersWithMeta(ctx context.Context) ([]store.ListCharactersWithMetaRow, error) {
+	if m.ListCharactersWithMetaFn != nil {
+		return m.ListCharactersWithMetaFn(ctx)
 	}
 	return nil, nil
 }

@@ -8,9 +8,13 @@ import (
 )
 
 type characterJSON struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              int64     `json:"id"`
+	Name            string    `json:"name"`
+	CorporationID   int64     `json:"corporation_id"`
+	CorporationName string    `json:"corporation_name"`
+	IsDelegate      bool      `json:"is_delegate"`
+	SyncError       *string   `json:"sync_error"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // Handles:
@@ -18,14 +22,26 @@ type characterJSON struct {
 //	GET    /api/characters
 //	DELETE /api/characters/{id}
 func (r *router) handleGetCharacters(w http.ResponseWriter, req *http.Request) {
-	chars, err := r.q.ListCharacters(req.Context())
+	chars, err := r.q.ListCharactersWithMeta(req.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to list characters")
 		return
 	}
 	resp := make([]characterJSON, len(chars))
 	for i, c := range chars {
-		resp[i] = characterJSON{ID: c.ID, Name: c.Name, CreatedAt: c.CreatedAt}
+		var syncErr *string
+		if s, ok := c.SyncError.(string); ok && s != "" {
+			syncErr = &s
+		}
+		resp[i] = characterJSON{
+			ID:              c.ID,
+			Name:            c.Name,
+			CorporationID:   c.CorporationID,
+			CorporationName: c.CorporationName,
+			IsDelegate:      c.IsDelegate != 0,
+			SyncError:       syncErr,
+			CreatedAt:       c.CreatedAt,
+		}
 	}
 	writeJSON(w, http.StatusOK, resp)
 }

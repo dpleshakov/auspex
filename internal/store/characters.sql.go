@@ -121,6 +121,65 @@ func (q *Queries) ListCharactersByCorporation(ctx context.Context, corporationID
 	return items, nil
 }
 
+const listCharactersWithMeta = `-- name: ListCharactersWithMeta :many
+SELECT
+  ch.id,
+  ch.name,
+  ch.corporation_id,
+  ch.corporation_name,
+  ch.created_at,
+  CASE WHEN corp.id IS NOT NULL THEN 1 ELSE 0 END AS is_delegate,
+  CASE WHEN corp.id IS NOT NULL THEN (
+    SELECT last_error FROM sync_state
+    WHERE owner_type = 'corporation' AND owner_id = ch.corporation_id AND last_error IS NOT NULL
+    LIMIT 1
+  ) ELSE NULL END AS sync_error
+FROM characters ch
+LEFT JOIN corporations corp ON corp.delegate_id = ch.id
+ORDER BY ch.name
+`
+
+type ListCharactersWithMetaRow struct {
+	ID              int64
+	Name            string
+	CorporationID   int64
+	CorporationName string
+	CreatedAt       time.Time
+	IsDelegate      int64
+	SyncError       interface{}
+}
+
+func (q *Queries) ListCharactersWithMeta(ctx context.Context) ([]ListCharactersWithMetaRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCharactersWithMeta)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCharactersWithMetaRow
+	for rows.Next() {
+		var i ListCharactersWithMetaRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CorporationID,
+			&i.CorporationName,
+			&i.CreatedAt,
+			&i.IsDelegate,
+			&i.SyncError,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertCharacter = `-- name: UpsertCharacter :exec
 INSERT INTO characters (id, name, access_token, refresh_token, token_expiry, corporation_id, corporation_name)
 VALUES (?, ?, ?, ?, ?, ?, ?)

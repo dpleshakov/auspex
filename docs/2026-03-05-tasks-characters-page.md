@@ -89,7 +89,7 @@ Body: { "character_id": 12345678 }
 **Type:** Regular
 **Description:** Update `GET /api/characters` handler and the underlying store query. Add to each character in the response: `corporation_id` and `corporation_name` (from the characters table); `is_delegate` (true if a row in `corporations` has `delegate_id = character.id`); `sync_error` (value of `sync_state.last_error` for `owner_type = 'corporation'` and `owner_id = character.corporation_id` where `character.id = corporations.delegate_id`, otherwise `null`). Update `internal/sync/worker.go` to write the error message to `sync_state.last_error` on a failed sync and clear it on success.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-06 `review-backend`
 **Type:** Review

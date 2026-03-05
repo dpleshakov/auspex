@@ -28,5 +28,22 @@ ON CONFLICT(id) DO UPDATE SET
     corporation_id   = excluded.corporation_id,
     corporation_name = excluded.corporation_name;
 
+-- name: ListCharactersWithMeta :many
+SELECT
+  ch.id,
+  ch.name,
+  ch.corporation_id,
+  ch.corporation_name,
+  ch.created_at,
+  CASE WHEN corp.id IS NOT NULL THEN 1 ELSE 0 END AS is_delegate,
+  CASE WHEN corp.id IS NOT NULL THEN (
+    SELECT last_error FROM sync_state
+    WHERE owner_type = 'corporation' AND owner_id = ch.corporation_id AND last_error IS NOT NULL
+    LIMIT 1
+  ) ELSE NULL END AS sync_error
+FROM characters ch
+LEFT JOIN corporations corp ON corp.delegate_id = ch.id
+ORDER BY ch.name;
+
 -- name: DeleteCharacter :exec
 DELETE FROM characters WHERE id = ?;
