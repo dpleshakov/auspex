@@ -59,6 +59,10 @@ export default function CharactersPage() {
     }
   }
 
+  if (error && characters === null) {
+    return <div className="chars-page__error">Error: {error}</div>
+  }
+
   if (characters === null) {
     return <div className="chars-page__loading">Loading…</div>
   }
