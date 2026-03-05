@@ -36,9 +36,15 @@ The only permitted exceptions are EVE Online proper nouns (ship names, item name
 ## Commands
 
 ```bash
-# Before every commit — both must pass
-make build     # lint + tests + full build (frontend → sqlc → Go binary)
-make release   # build release distribution (goreleaser snapshot)
+# Before every commit — both must pass.
+make build     # generate, compile, test
+make lint      # npm audit, go mod tidy, golangci-lint
+
+# Full CI-equivalent check — requires a clean worktree (all changes committed).
+make check
+
+# Build release distribution (goreleaser snapshot).
+make release
 
 # During development — quick feedback
 make test                                    # Go tests only
@@ -46,9 +52,8 @@ go build ./cmd/auspex/                         # run the server locally
 cd cmd/auspex/web && npm run dev             # frontend dev server with HMR (proxies /api and /auth to :8080)
 ```
 
-`make build` runs in order: `sqlc generate`, `npm audit`, `npm ci && npm run build`,
-`go mod tidy`, `go vet`, `golangci-lint`, `go test`, `go build`. Re-run after any change
-to `internal/db/migrations/` or `internal/db/queries/`.
+`make build` runs in order: `sqlc generate`, `npm ci && npm run build`, `go vet`, `go test`, `go build`.
+Re-run after any change to `internal/db/migrations/` or `internal/db/queries/`.
 
 ---
 

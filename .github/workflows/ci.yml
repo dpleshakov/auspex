@@ -32,5 +32,5 @@ jobs:
           install-only: true
           version: v2.10
 
-      - name: Build
-        run: make build
+      - name: Check
+        run: make check
