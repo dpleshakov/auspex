@@ -52,10 +52,45 @@ body {
   color: #c8c8c8;
 }
 
+.app-header__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .app-header__actions {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.app-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-left: 8px;
+}
+
+.app-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #666;
+  font-size: 13px;
+  padding: 4px 14px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  transition: color 0.15s, border-color 0.15s;
+  line-height: 1.5;
+}
+
+.app-tab:hover {
+  color: #a0a0a0;
+}
+
+.app-tab--active {
+  color: #c8c8c8;
+  border-bottom-color: #f0c040;
 }
 
 .app-add-char-link {
