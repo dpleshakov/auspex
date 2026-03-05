@@ -65,7 +65,7 @@ Body: { "character_id": 12345678 }
 **Type:** Regular
 **Description:** Add migration adding `corporation_id INTEGER NOT NULL DEFAULT 0` and `corporation_name TEXT NOT NULL DEFAULT ''` to the `characters` table, and `last_error TEXT` to `sync_state`. Update the OAuth callback (`internal/auth/oauth.go`) to populate `corporation_id` and `corporation_name` from the `/verify` response when saving a character. Update sqlc queries: `CreateCharacter` / `UpsertCharacter` to include `corporation_id` and `corporation_name`; add `ListCharactersByCorporation(corporation_id)` for use in delete logic; add `UpdateSyncStateError(owner_type, owner_id, endpoint, error)` for recording sync failures.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-02 `auto-add-corporation`
 **Type:** Regular

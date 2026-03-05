@@ -21,7 +21,6 @@ type Querier interface {
 	// sqlc queries for the characters table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetCharacter(ctx context.Context, id int64) (Character, error)
-	ListCharactersByCorporation(ctx context.Context, corporationID int64) ([]Character, error)
 	// sqlc queries for the corporations table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetCorporation(ctx context.Context, id int64) (Corporation, error)
@@ -29,7 +28,6 @@ type Querier interface {
 	// sqlc queries for the sync_state table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetSyncState(ctx context.Context, arg GetSyncStateParams) (SyncState, error)
-	UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error
 	InsertCorporation(ctx context.Context, arg InsertCorporationParams) error
 	// sqlc queries for eve_types, eve_groups, eve_categories tables.
 	// See https://docs.sqlc.dev for query annotation syntax.
@@ -40,9 +38,11 @@ type Querier interface {
 	ListBlueprints(ctx context.Context, arg ListBlueprintsParams) ([]ListBlueprintsRow, error)
 	ListCharacterSlotUsage(ctx context.Context) ([]ListCharacterSlotUsageRow, error)
 	ListCharacters(ctx context.Context) ([]Character, error)
+	ListCharactersByCorporation(ctx context.Context, corporationID int64) ([]Character, error)
 	ListCorporations(ctx context.Context) ([]ListCorporationsRow, error)
 	ListJobIDsByOwner(ctx context.Context, arg ListJobIDsByOwnerParams) ([]int64, error)
 	ListSyncStatus(ctx context.Context) ([]ListSyncStatusRow, error)
+	UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error
 	// sqlc queries for the blueprints table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	UpsertBlueprint(ctx context.Context, arg UpsertBlueprintParams) error

@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -51,28 +52,6 @@ func (q *Queries) GetSyncState(ctx context.Context, arg GetSyncStateParams) (Syn
 		&i.LastError,
 	)
 	return i, err
-}
-
-const updateSyncStateError = `-- name: UpdateSyncStateError :exec
-UPDATE sync_state SET last_error = ?
-WHERE owner_type = ? AND owner_id = ? AND endpoint = ?
-`
-
-type UpdateSyncStateErrorParams struct {
-	LastError *string
-	OwnerType string
-	OwnerID   int64
-	Endpoint  string
-}
-
-func (q *Queries) UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error {
-	_, err := q.db.ExecContext(ctx, updateSyncStateError,
-		arg.LastError,
-		arg.OwnerType,
-		arg.OwnerID,
-		arg.Endpoint,
-	)
-	return err
 }
 
 const listSyncStatus = `-- name: ListSyncStatus :many
@@ -126,6 +105,28 @@ func (q *Queries) ListSyncStatus(ctx context.Context) ([]ListSyncStatusRow, erro
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSyncStateError = `-- name: UpdateSyncStateError :exec
+UPDATE sync_state SET last_error = ?
+WHERE owner_type = ? AND owner_id = ? AND endpoint = ?
+`
+
+type UpdateSyncStateErrorParams struct {
+	LastError sql.NullString
+	OwnerType string
+	OwnerID   int64
+	Endpoint  string
+}
+
+func (q *Queries) UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error {
+	_, err := q.db.ExecContext(ctx, updateSyncStateError,
+		arg.LastError,
+		arg.OwnerType,
+		arg.OwnerID,
+		arg.Endpoint,
+	)
+	return err
 }
 
 const upsertSyncState = `-- name: UpsertSyncState :exec
