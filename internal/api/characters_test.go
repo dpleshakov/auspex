@@ -111,6 +111,10 @@ func TestDeleteCharacter_OK(t *testing.T) {
 func TestDeleteCharacter_CascadeOrder(t *testing.T) {
 	var calls []string
 	mock := &mockQuerier{
+		// CorporationID=0 → no corp logic, only character cascade.
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: 7, CorporationID: 0}, nil
+		},
 		DeleteBlueprintsByOwnerFn: func(_ context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
 			calls = append(calls, "blueprints:"+arg.OwnerType)
 			return nil
@@ -145,6 +149,158 @@ func TestDeleteCharacter_CascadeOrder(t *testing.T) {
 		if c != want[i] {
 			t.Errorf("cascade call[%d] = %q, want %q", i, c, want[i])
 		}
+	}
+}
+
+func TestDeleteCharacter_LastInCorp(t *testing.T) {
+	const charID int64 = 10
+	const corpID int64 = 98765432
+	var calls []string
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: charID, CorporationID: corpID}, nil
+		},
+		ListCharactersByCorporationFn: func(_ context.Context, _ int64) ([]store.Character, error) {
+			// Only the character being deleted — no others.
+			return []store.Character{{ID: charID}}, nil
+		},
+		DeleteBlueprintsByOwnerFn: func(_ context.Context, arg store.DeleteBlueprintsByOwnerParams) error {
+			calls = append(calls, "blueprints:"+arg.OwnerType)
+			return nil
+		},
+		DeleteJobsByOwnerFn: func(_ context.Context, arg store.DeleteJobsByOwnerParams) error {
+			calls = append(calls, "jobs:"+arg.OwnerType)
+			return nil
+		},
+		DeleteSyncStateByOwnerFn: func(_ context.Context, arg store.DeleteSyncStateByOwnerParams) error {
+			calls = append(calls, "sync_state:"+arg.OwnerType)
+			return nil
+		},
+		DeleteCorporationFn: func(_ context.Context, _ int64) error {
+			calls = append(calls, "corporation")
+			return nil
+		},
+		DeleteCharacterFn: func(_ context.Context, _ int64) error {
+			calls = append(calls, "character")
+			return nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/10", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
+	}
+	want := []string{
+		"blueprints:corporation", "jobs:corporation", "sync_state:corporation", "corporation",
+		"blueprints:character", "jobs:character", "sync_state:character", "character",
+	}
+	if len(calls) != len(want) {
+		t.Fatalf("cascade calls = %v, want %v", calls, want)
+	}
+	for i, c := range calls {
+		if c != want[i] {
+			t.Errorf("cascade call[%d] = %q, want %q", i, c, want[i])
+		}
+	}
+}
+
+func TestDeleteCharacter_DelegateReassignment(t *testing.T) {
+	const charID int64 = 10
+	const otherID int64 = 11
+	const corpID int64 = 98765432
+	var newDelegateID int64
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: charID, CorporationID: corpID}, nil
+		},
+		ListCharactersByCorporationFn: func(_ context.Context, _ int64) ([]store.Character, error) {
+			return []store.Character{{ID: charID}, {ID: otherID}}, nil
+		},
+		GetCorporationFn: func(_ context.Context, _ int64) (store.Corporation, error) {
+			return store.Corporation{ID: corpID, DelegateID: charID}, nil
+		},
+		UpdateCorporationDelegateFn: func(_ context.Context, arg store.UpdateCorporationDelegateParams) error {
+			newDelegateID = arg.DelegateID
+			return nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/10", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
+	}
+	if newDelegateID != otherID {
+		t.Errorf("expected delegate reassigned to %d, got %d", otherID, newDelegateID)
+	}
+}
+
+func TestDeleteCharacter_NotDelegate_NoReassignment(t *testing.T) {
+	const charID int64 = 10
+	const delegateID int64 = 99
+	const corpID int64 = 98765432
+	reassigned := false
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: charID, CorporationID: corpID}, nil
+		},
+		ListCharactersByCorporationFn: func(_ context.Context, _ int64) ([]store.Character, error) {
+			return []store.Character{{ID: charID}, {ID: delegateID}}, nil
+		},
+		GetCorporationFn: func(_ context.Context, _ int64) (store.Corporation, error) {
+			// Character 10 is NOT the delegate.
+			return store.Corporation{ID: corpID, DelegateID: delegateID}, nil
+		},
+		UpdateCorporationDelegateFn: func(_ context.Context, _ store.UpdateCorporationDelegateParams) error {
+			reassigned = true
+			return nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/10", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
+	}
+	if reassigned {
+		t.Error("delegate must not be reassigned when character is not the delegate")
+	}
+}
+
+func TestDeleteCharacter_NPCCorp_NoCorpLogic(t *testing.T) {
+	const charID int64 = 10
+	const npcCorpID int64 = 1_000_002 // NPC range
+	corpDataDeleted := false
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: charID, CorporationID: npcCorpID}, nil
+		},
+		DeleteCorporationFn: func(_ context.Context, _ int64) error {
+			corpDataDeleted = true
+			return nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/10", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
+	}
+	if corpDataDeleted {
+		t.Error("NPC corporation data must not be deleted")
 	}
 }
 

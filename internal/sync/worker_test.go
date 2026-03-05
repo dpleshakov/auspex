@@ -172,6 +172,9 @@ func (m *mockQuerier) ListCharactersByCorporation(_ context.Context, _ int64) ([
 func (m *mockQuerier) UpdateSyncStateError(_ context.Context, _ store.UpdateSyncStateErrorParams) error {
 	panic("unexpected call to UpdateSyncStateError")
 }
+func (m *mockQuerier) UpdateCorporationDelegate(_ context.Context, _ store.UpdateCorporationDelegateParams) error {
+	panic("unexpected call to UpdateCorporationDelegate")
+}
 
 // Compile-time assertion: *mockQuerier must satisfy store.Querier.
 var _ store.Querier = (*mockQuerier)(nil)

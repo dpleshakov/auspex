@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+const updateCorporationDelegate = `-- name: UpdateCorporationDelegate :exec
+UPDATE corporations SET delegate_id = ? WHERE id = ?
+`
+
+type UpdateCorporationDelegateParams struct {
+	DelegateID int64
+	ID         int64
+}
+
+func (q *Queries) UpdateCorporationDelegate(ctx context.Context, arg UpdateCorporationDelegateParams) error {
+	_, err := q.db.ExecContext(ctx, updateCorporationDelegate, arg.DelegateID, arg.ID)
+	return err
+}
+
 const deleteCorporation = `-- name: DeleteCorporation :exec
 DELETE FROM corporations WHERE id = ?
 `
