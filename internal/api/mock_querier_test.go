@@ -10,18 +10,18 @@ import (
 // Each method delegates to the corresponding Fn field if non-nil;
 // otherwise it returns the zero value and nil error.
 type mockQuerier struct {
-	ListCharactersFn          func(ctx context.Context) ([]store.Character, error)
-	DeleteCharacterFn         func(ctx context.Context, id int64) error
-	DeleteBlueprintsByOwnerFn func(ctx context.Context, arg store.DeleteBlueprintsByOwnerParams) error
-	DeleteJobsByOwnerFn       func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error
-	DeleteSyncStateByOwnerFn  func(ctx context.Context, arg store.DeleteSyncStateByOwnerParams) error
-	GetCharacterFn            func(ctx context.Context, id int64) (store.Character, error)
-	ListCorporationsFn              func(ctx context.Context) ([]store.ListCorporationsRow, error)
-	InsertCorporationFn             func(ctx context.Context, arg store.InsertCorporationParams) error
-	DeleteCorporationFn             func(ctx context.Context, id int64) error
-	UpdateCorporationDelegateFn     func(ctx context.Context, arg store.UpdateCorporationDelegateParams) error
-	ListCharactersByCorporationFn   func(ctx context.Context, corporationID int64) ([]store.Character, error)
-	GetCorporationFn                func(ctx context.Context, id int64) (store.Corporation, error)
+	ListCharactersFn              func(ctx context.Context) ([]store.Character, error)
+	DeleteCharacterFn             func(ctx context.Context, id int64) error
+	DeleteBlueprintsByOwnerFn     func(ctx context.Context, arg store.DeleteBlueprintsByOwnerParams) error
+	DeleteJobsByOwnerFn           func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error
+	DeleteSyncStateByOwnerFn      func(ctx context.Context, arg store.DeleteSyncStateByOwnerParams) error
+	GetCharacterFn                func(ctx context.Context, id int64) (store.Character, error)
+	ListCorporationsFn            func(ctx context.Context) ([]store.ListCorporationsRow, error)
+	InsertCorporationFn           func(ctx context.Context, arg store.InsertCorporationParams) error
+	DeleteCorporationFn           func(ctx context.Context, id int64) error
+	UpdateCorporationDelegateFn   func(ctx context.Context, arg store.UpdateCorporationDelegateParams) error
+	ListCharactersByCorporationFn func(ctx context.Context, corporationID int64) ([]store.Character, error)
+	GetCorporationFn              func(ctx context.Context, id int64) (store.Corporation, error)
 
 	ListBlueprintsFn         func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error)
 	CountIdleBlueprintsFn    func(ctx context.Context) (int64, error)
