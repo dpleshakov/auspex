@@ -28,12 +28,14 @@ CREATE TABLE eve_types (
 
 -- Authorized characters (one OAuth token per character)
 CREATE TABLE characters (
-    id            INTEGER PRIMARY KEY,  -- EVE character_id
-    name          TEXT NOT NULL,
-    access_token  TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    token_expiry  DATETIME NOT NULL,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id               INTEGER PRIMARY KEY,  -- EVE character_id
+    name             TEXT NOT NULL,
+    access_token     TEXT NOT NULL,
+    refresh_token    TEXT NOT NULL,
+    token_expiry     DATETIME NOT NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    corporation_id   INTEGER NOT NULL DEFAULT 0,
+    corporation_name TEXT NOT NULL DEFAULT ''
 );
 
 -- Tracked corporations (accessed via delegate character)
@@ -77,6 +79,7 @@ CREATE TABLE sync_state (
     endpoint    TEXT NOT NULL,      -- 'blueprints' | 'jobs'
     last_sync   DATETIME NOT NULL,
     cache_until DATETIME NOT NULL,
+    last_error  TEXT,               -- last sync error message; NULL when last sync succeeded
     PRIMARY KEY (owner_type, owner_id, endpoint)
 );
 ```
@@ -118,6 +121,10 @@ Returns all characters that have been added via the OAuth2 flow.
   {
     "id": 12345678,
     "name": "My Character",
+    "corporation_id": 98765432,
+    "corporation_name": "Center for Advanced Studies",
+    "is_delegate": true,
+    "sync_error": null,
     "created_at": "2026-02-21T10:00:00Z"
   }
 ]
@@ -127,6 +134,10 @@ Returns all characters that have been added via the OAuth2 flow.
 |-------|------|-------------|
 | `id` | integer | EVE character ID |
 | `name` | string | Character name |
+| `corporation_id` | integer | EVE corporation ID the character belongs to |
+| `corporation_name` | string | EVE corporation name (stored at character save time; used for NPC corporations not in the `corporations` table) |
+| `is_delegate` | boolean | Whether this character is the delegate for its corporation |
+| `sync_error` | string or `null` | Last sync error for this character's corporation (only when `is_delegate = true` and last sync failed); `null` otherwise |
 | `created_at` | ISO 8601 datetime | When the character was added |
 
 Returns an empty array `[]` if no characters have been added.
@@ -136,6 +147,8 @@ Returns an empty array `[]` if no characters have been added.
 #### `DELETE /api/characters/{id}`
 
 Removes a character and all associated data (blueprints, jobs, sync state).
+
+If the deleted character is the last member of a player corporation, the corporation and all its data (blueprints, jobs, sync state) are deleted first. If other characters share the same corporation and the deleted character is the current delegate, the delegate is reassigned to the first remaining character. NPC corporations (ID range 1000000–2000000) are never in the `corporations` table, so no corporation logic applies.
 
 **Path parameters:**
 
@@ -211,6 +224,37 @@ Adds a corporation to be tracked. The delegate character must already be added v
 |--------|-------------|
 | `201 Created` | Corporation added |
 | `400 Bad Request` | Missing required fields, or `delegate_id` does not refer to a known character |
+| `500 Internal Server Error` | Database error |
+
+---
+
+#### `PATCH /api/corporations/{id}/delegate`
+
+Updates the delegate character for a corporation.
+
+**Path parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | integer | EVE corporation ID |
+
+**Request body:**
+
+```json
+{ "character_id": 12345678 }
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `character_id` | integer | yes | EVE character ID to set as delegate; must belong to this corporation |
+
+**Responses:**
+
+| Status | Description |
+|--------|-------------|
+| `204 No Content` | Delegate updated |
+| `400 Bad Request` | `character_id` missing, or character does not belong to this corporation |
+| `404 Not Found` | Corporation not found |
 | `500 Internal Server Error` | Database error |
 
 ---
@@ -453,6 +497,8 @@ OAuth2 callback endpoint. EVE SSO redirects here after the user completes author
 After a successful callback, Auspex:
 1. Exchanges the authorization code for access and refresh tokens
 2. Calls `GET /verify` to resolve the character ID and name
-3. Saves the character and tokens to SQLite
-4. Triggers an immediate background sync for the new character
-5. Redirects to `/` (the React dashboard)
+3. Calls ESI `GET /characters/{id}/` to resolve the character's corporation
+4. Saves the character (with `corporation_id` and `corporation_name`) to SQLite
+5. If the corporation is a player corporation (ID outside 1000000–2000000), inserts it into the `corporations` table with this character as delegate (`INSERT OR IGNORE` — if already tracked, the existing delegate is preserved)
+6. Triggers an immediate background sync for the new character
+7. Redirects to `/` (the React dashboard)

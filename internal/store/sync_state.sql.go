@@ -108,23 +108,24 @@ func (q *Queries) ListSyncStatus(ctx context.Context) ([]ListSyncStatusRow, erro
 }
 
 const updateSyncStateError = `-- name: UpdateSyncStateError :exec
-UPDATE sync_state SET last_error = ?
-WHERE owner_type = ? AND owner_id = ? AND endpoint = ?
+INSERT INTO sync_state (owner_type, owner_id, endpoint, last_sync, cache_until, last_error)
+VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+ON CONFLICT(owner_type, owner_id, endpoint) DO UPDATE SET last_error = excluded.last_error
 `
 
 type UpdateSyncStateErrorParams struct {
-	LastError sql.NullString
 	OwnerType string
 	OwnerID   int64
 	Endpoint  string
+	LastError sql.NullString
 }
 
 func (q *Queries) UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error {
 	_, err := q.db.ExecContext(ctx, updateSyncStateError,
-		arg.LastError,
 		arg.OwnerType,
 		arg.OwnerID,
 		arg.Endpoint,
+		arg.LastError,
 	)
 	return err
 }
