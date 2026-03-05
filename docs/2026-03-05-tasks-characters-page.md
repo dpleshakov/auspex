@@ -71,19 +71,19 @@ Body: { "character_id": 12345678 }
 **Type:** Regular
 **Description:** In the OAuth callback, after saving a character: if `corporation_id` is outside the NPC range (1000000–2000000), insert the corporation into the `corporations` table with this character as delegate (`INSERT OR IGNORE` — if the corporation already exists, leave the existing delegate unchanged). Then trigger an immediate sync for the corporation. Update `internal/auth/oauth.go` and the relevant store queries.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-03 `delete-character-logic`
 **Type:** Regular
 **Description:** Update `DELETE /api/characters/{id}` in `internal/api/characters.go`. Before deleting the character: (1) count other characters sharing the same `corporation_id`; (2) if count is zero and the corporation exists in the `corporations` table — delete the corporation's blueprints, jobs, sync_state, and the corporation row first; (3) if count is greater than zero and the character is the current delegate — reassign `delegate_id` to the first other character from `ListCharactersByCorporation`. Then delete the character's own blueprints, jobs, sync_state, and the character row.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-04 `delegate-endpoint`
 **Type:** Regular
 **Description:** Implement `PATCH /api/corporations/{id}/delegate` in `internal/api/corporations.go`. Validate that the corporation exists and that the supplied `character_id` belongs to the corporation (via `corporation_id` field on the character row). Update `delegate_id`. Return 400 if the character does not belong to this corporation, 404 if the corporation is not found.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-05 `characters-api-response`
 **Type:** Regular
