@@ -1,6 +1,6 @@
 # 2026-03-05-tasks-makefile-build.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -57,7 +57,7 @@ handled by the setup-node action cache or can be added as a separate step if nee
 **Definition of done:** `make build` succeeds with uncommitted changes present; `make lint`
 runs golangci-lint and npm audit standalone; `make check` runs everything including diff
 checks; committed.
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
@@ -82,7 +82,7 @@ This is the only required change. CI already has a clean worktree (fresh checkou
 that were not committed.
 
 **Definition of done:** `ci.yml` uses `make check`; committed.
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
@@ -122,7 +122,7 @@ Add `lint` and `check` rows; update the description of `build`:
 | `check` | Full CI check: lint + build + git diff consistency verification. Requires clean worktree. |
 
 **Definition of done:** both files updated and accurately describe the three targets; committed.
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
@@ -136,4 +136,4 @@ Add `lint` and `check` rows; update the description of `build`:
 - Run `make check` with uncommitted generated files — must fail on git diff
 - Verify CI workflow file is valid YAML
 - Verify CONTRIBUTING.md and CLAUDE.md accurately describe the three targets
-**Status:** ⬜ Pending
+**Status:** ✅ Done
