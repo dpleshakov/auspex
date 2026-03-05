@@ -16,15 +16,15 @@
 
 Build order is critical and enforced by the Makefile:
 
-1. `npm run build` — compiles the React frontend into `cmd/auspex/web/dist/`
-2. `sqlc generate` — regenerates `internal/store/` from SQL query files
+1. `sqlc generate` — regenerates `internal/store/` from SQL query files
+2. `npm ci && npm run build` — installs dependencies and compiles the React frontend into `cmd/auspex/web/dist/`
 3. `go build` — compiles the Go binary with the embedded frontend
 
 ```bash
 make build
 ```
 
-This runs all three steps in the correct order and produces an `auspex` (or `auspex.exe`) binary in the project root.
+This runs all steps in the correct order and produces an `auspex` (or `auspex.exe`) binary in the project root. Run `make lint` before pushing.
 
 ### Cross-compilation
 
@@ -68,7 +68,9 @@ Open `http://localhost:5173`.
 
 | Target | Action |
 |--------|--------|
-| `build` | Full build: frontend → sqlc → go build |
+| `build` | Development build: sqlc → frontend → vet → test → go build. Safe to run before committing. |
+| `lint`  | Static analysis: npm audit, go mod tidy, golangci-lint. Run before pushing. |
+| `check` | Full CI check: lint + build + git diff consistency verification. Requires clean worktree. |
 | `test` | `go test ./...` |
 | `clean` | Remove binary and rebuild `web/dist/` with only `.gitkeep` |
 | `clean-all` | `clean` + remove `auspex.db` |

@@ -1,18 +1,25 @@
-.PHONY: build test release release-notes versioninfo clean clean-all
+.PHONY: build lint check test release release-notes versioninfo clean clean-all
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-# Full check + build: consistency checks, linters, tests, compilation.
-# Run before every push. Identical to what CI runs.
+# Development build: generate code, build frontend, vet, test, compile.
+# Safe to run before committing — no diff checks.
 build:
-	sqlc generate && git diff --exit-code internal/store/
-	cd cmd/auspex/web && npm audit --audit-level=high
+	sqlc generate
 	cd cmd/auspex/web && npm ci && npm run build
-	go mod tidy && git diff --exit-code go.mod go.sum
 	go vet ./...
-	golangci-lint run
 	go test ./...
 	go build ./cmd/auspex/
+
+# Static analysis: npm audit, go mod tidy, golangci-lint. Run before pushing.
+lint:
+	cd cmd/auspex/web && npm audit --audit-level=high
+	go mod tidy
+	golangci-lint run
+
+# Full CI-equivalent check: lint + build + diff verification. Requires a clean worktree.
+check: lint build
+	git diff --exit-code internal/store/ go.mod go.sum
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
