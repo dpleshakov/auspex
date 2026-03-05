@@ -43,6 +43,7 @@ type Querier interface {
 	ListCorporations(ctx context.Context) ([]ListCorporationsRow, error)
 	ListJobIDsByOwner(ctx context.Context, arg ListJobIDsByOwnerParams) ([]int64, error)
 	ListSyncStatus(ctx context.Context) ([]ListSyncStatusRow, error)
+	UpdateCorporationDelegate(ctx context.Context, arg UpdateCorporationDelegateParams) error
 	UpdateSyncStateError(ctx context.Context, arg UpdateSyncStateErrorParams) error
 	// sqlc queries for the blueprints table.
 	// See https://docs.sqlc.dev for query annotation syntax.

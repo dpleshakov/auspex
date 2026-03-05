@@ -16,9 +16,12 @@ type mockQuerier struct {
 	DeleteJobsByOwnerFn       func(ctx context.Context, arg store.DeleteJobsByOwnerParams) error
 	DeleteSyncStateByOwnerFn  func(ctx context.Context, arg store.DeleteSyncStateByOwnerParams) error
 	GetCharacterFn            func(ctx context.Context, id int64) (store.Character, error)
-	ListCorporationsFn        func(ctx context.Context) ([]store.ListCorporationsRow, error)
-	InsertCorporationFn       func(ctx context.Context, arg store.InsertCorporationParams) error
-	DeleteCorporationFn       func(ctx context.Context, id int64) error
+	ListCorporationsFn              func(ctx context.Context) ([]store.ListCorporationsRow, error)
+	InsertCorporationFn             func(ctx context.Context, arg store.InsertCorporationParams) error
+	DeleteCorporationFn             func(ctx context.Context, id int64) error
+	UpdateCorporationDelegateFn     func(ctx context.Context, arg store.UpdateCorporationDelegateParams) error
+	ListCharactersByCorporationFn   func(ctx context.Context, corporationID int64) ([]store.Character, error)
+	GetCorporationFn                func(ctx context.Context, id int64) (store.Corporation, error)
 
 	ListBlueprintsFn         func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error)
 	CountIdleBlueprintsFn    func(ctx context.Context) (int64, error)
@@ -120,8 +123,18 @@ func (m *mockQuerier) CountOverdueJobs(ctx context.Context) (int64, error) {
 
 func (m *mockQuerier) DeleteJobByID(_ context.Context, _ int64) error { return nil }
 
-func (m *mockQuerier) GetCorporation(_ context.Context, _ int64) (store.Corporation, error) {
+func (m *mockQuerier) GetCorporation(ctx context.Context, id int64) (store.Corporation, error) {
+	if m.GetCorporationFn != nil {
+		return m.GetCorporationFn(ctx, id)
+	}
 	return store.Corporation{}, nil
+}
+
+func (m *mockQuerier) UpdateCorporationDelegate(ctx context.Context, arg store.UpdateCorporationDelegateParams) error {
+	if m.UpdateCorporationDelegateFn != nil {
+		return m.UpdateCorporationDelegateFn(ctx, arg)
+	}
+	return nil
 }
 
 func (m *mockQuerier) GetEveType(_ context.Context, _ int64) (store.EveType, error) {
@@ -187,7 +200,10 @@ func (m *mockQuerier) UpsertSyncState(_ context.Context, _ store.UpsertSyncState
 	return nil
 }
 
-func (m *mockQuerier) ListCharactersByCorporation(_ context.Context, _ int64) ([]store.Character, error) {
+func (m *mockQuerier) ListCharactersByCorporation(ctx context.Context, corporationID int64) ([]store.Character, error) {
+	if m.ListCharactersByCorporationFn != nil {
+		return m.ListCharactersByCorporationFn(ctx, corporationID)
+	}
 	return nil, nil
 }
 

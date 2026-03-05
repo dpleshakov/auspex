@@ -20,5 +20,8 @@ VALUES (?, ?, ?);
 INSERT OR IGNORE INTO corporations (id, name, delegate_id)
 VALUES (?, ?, ?);
 
+-- name: UpdateCorporationDelegate :exec
+UPDATE corporations SET delegate_id = ? WHERE id = ?;
+
 -- name: DeleteCorporation :exec
 DELETE FROM corporations WHERE id = ?;
