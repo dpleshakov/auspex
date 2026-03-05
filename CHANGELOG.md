@@ -9,6 +9,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Characters tab for managing connected characters and corporations: view characters grouped by corporation, reassign the corporation delegate, and remove characters.
+- Corporation is now tracked automatically when a character is added; no manual setup required.
+
 ### Fixed
 
 - Blueprint table header no longer overlaps data rows when the page is scrolled.
