@@ -33,33 +33,24 @@ The only permitted exceptions are EVE Online proper nouns (ship names, item name
 
 ---
 
-## Expected Commands
-
-Once implemented, the standard workflow will be:
+## Commands
 
 ```bash
-# Run before committing — lint + tests + full build must all pass
-make check
+# Before every commit — both must pass
+make build     # lint + tests + full build (frontend → sqlc → Go binary)
+make release   # build release distribution (goreleaser snapshot)
 
-# Full build (frontend → sqlc → Go binary)
-make build            # macOS/Linux; on Windows requires make to be installed separately
-
-# Frontend only (in cmd/auspex/web/)
-npm install
-npm run dev           # dev server with HMR, proxies /api and /auth to localhost:8080
-npm run build         # produces dist/ that gets embedded into the Go binary
-
-# Backend only
-sqlc generate         # regenerate internal/store/ after schema or query changes
-go build -o auspex ./cmd/auspex/
-go run ./cmd/auspex/
-
-# Run a specific Go test
-go test ./internal/esi/...
-go test ./internal/sync/... -run TestSyncWorker
+# During development — quick feedback
+make test                                    # Go tests only
+go build ./cmd/auspex/                         # run the server locally
+cd cmd/auspex/web && npm run dev             # frontend dev server with HMR (proxies /api and /auth to :8080)
 ```
 
-Build order matters: `npm run build` → `sqlc generate` → `go build`. The Makefile enforces this. `sqlc generate` must be re-run after any change to `internal/db/migrations/` or `internal/db/queries/`.
+`make build` runs in order: `sqlc generate`, `npm audit`, `npm ci && npm run build`,
+`go mod tidy`, `go vet`, `golangci-lint`, `go test`, `go build`. Re-run after any change
+to `internal/db/migrations/` or `internal/db/queries/`.
+
+---
 
 ## Architecture
 
@@ -88,52 +79,4 @@ internal/
 
 **Lazy EVE universe resolution**: `eve_types`, `eve_groups`, `eve_categories` are populated on first encounter with a new `type_id` and never re-fetched — this data is stable.
 
-### Data Flow
-
-- **OAuth add character**: `/auth/eve/login` → EVE SSO → `/auth/eve/callback` → store token → trigger immediate sync → redirect to frontend
-- **Background sync** (ticker every N minutes): for each character/corp, check `sync_state.cache_until`, skip if still fresh, otherwise fetch from ESI, upsert to SQLite, resolve unknown `type_id`s, update `sync_state`
-- **Force refresh**: `POST /api/sync` sends signal to sync worker via channel → 202 immediately; frontend polls `GET /api/sync/status` every 2s watching `last_sync` timestamp
-- **Frontend reads**: always hits SQLite via API handlers; polling interval matches the configured auto-refresh interval
-
-### Database Schema Key Points
-
-- `sync_state` table tracks ESI cache expiry per `(owner_type, owner_id, endpoint)` — the sync worker reads `Expires` response header and writes it here
-- Blueprint `status` is derived, not stored: a blueprint is `idle` if it has no associated job in the `jobs` table with `status IN ('active', 'ready')`
-- `jobs` table only stores active/ready jobs; completed/canceled jobs from ESI are ignored
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend language | Go 1.26+ |
-| HTTP router | Chi v5 |
-| Database | SQLite via `modernc.org/sqlite` (pure Go, no CGO) |
-| SQL codegen | sqlc v2 |
-| OAuth2 | `golang.org/x/oauth2` |
-| Frontend framework | React 18 |
-| Build tool | Vite |
-| Table component | TanStack Table v8 |
-| Styling | Plain CSS (no framework) |
-
-**Why `modernc.org/sqlite` over `mattn/go-sqlite3`**: avoids CGO, enabling cross-platform single-binary compilation without a C toolchain per target platform.
-
-## MVP Scope
-
-MVP = BPO library + research slot monitoring only.
-
-**In MVP**: ESI OAuth, multi-character + multi-corp support, BPO table (Name, Category, ME%, TE%, status, owner, location, end date), summary row (idle/overdue/completing today/free slots), visual highlights (red = overdue, yellow = completing today), sort/filter, auto-refresh + manual refresh.
-
-**Post-MVP**: manufacturing slot monitoring, BPC library, profitability analytics, mineral tracking, Wails desktop wrapper, external alerts.
-
-## ESI API Endpoints Used
-
-- `GET /characters/{id}/blueprints`
-- `GET /characters/{id}/industry/jobs`
-- `GET /corporations/{id}/blueprints`
-- `GET /corporations/{id}/industry/jobs`
-- `GET /universe/types/{type_id}`
-- `POST /universe/names/` (bulk resolve)
-- `GET /verify` (character verification after OAuth)
-
-ESI reference: https://esi.evetech.net/ui/
-EVE SSO docs: https://developers.eveonline.com/blog/article/sso-to-authenticated-calls
+For data flow, database schema, tech stack, MVP scope, and ESI endpoints — see [`docs/architecture.md`](docs/architecture.md) and [`docs/technical-reference.md`](docs/technical-reference.md).
