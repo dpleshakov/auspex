@@ -127,4 +127,14 @@ Body: { "character_id": 12345678 }
 - Update user-facing documentation (README, help, guides) if behaviour visible to the user has changed
 - Verify `technical-reference.md` is up to date — all API and schema changes introduced by this feature must be reflected
 - Update `CHANGELOG.md` — only user-visible changes, following the format in `process-changelog.md`
+**Status:** ✅ Done
+
+### TASK-11 `characters-page-polish`
+**Type:** Regular
+**Description:** Polish the Characters page layout and usability. Changes:
+- Remove the `+ Add character` button at the bottom of the list; keep only the one in the top-right corner. When no characters have been added yet, show a centered empty state with a single `+ Add character` button and a short explanation (e.g. "No characters added yet. Add a character to get started.").
+- Replace the delegate dot indicator with a filled circle ● + text label `Delegate` for the delegate character (non-interactive). For all other characters in the same player corporation group, show an empty circle ○ + a `Make delegate` button — clicking it calls `PATCH /api/corporations/{id}/delegate` and reloads the page.
+- Add two columns to each character row: blueprint count (number of blueprints owned by this character, from already loaded blueprint data or a dedicated query) and last sync time (from `GET /api/sync/status` for this character).
+- Improve corporation group visual separation: add a bottom margin between groups and a subtle divider line so groups are clearly distinct when there are multiple corporations.
+**Definition of done:** working code + committed
 **Status:** ⬜ Pending

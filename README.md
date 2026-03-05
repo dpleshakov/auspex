@@ -10,18 +10,18 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 
 ## Features
 
-- Multi-character and corporation support via EVE SSO OAuth2
+- Multi-character and corporation support via EVE SSO OAuth2; corporations are tracked automatically when a character is added
 - Unified BPO table with ME%, TE%, status, owner, location, and job end date
 - Row highlighting: red for overdue jobs, yellow for jobs completing today
 - Summary bar: idle BPOs / overdue / completing today / free research slots
 - Per-character slot usage
 - Sort by any column; filter by status, owner, and category
 - Auto-refresh on a configurable interval with manual force-refresh
+- Characters tab: view all characters grouped by corporation, reassign the corporation delegate, and remove characters
 - Single binary — no Docker, no PostgreSQL, no external services required
 
 ## Known Limitations
 
-- Corporation management (add / remove) is not yet available in the UI — tracked in [docs/tasks-backlog.md](docs/tasks-backlog.md).
 - Only the first page of ESI results is fetched — large corporation BPO libraries (>1000 items) will be truncated silently.
 - Location IDs are displayed as raw numbers; human-readable station names are not yet implemented.
 - Free research slots count is always 0 (requires per-character skill data from ESI, not yet implemented).
