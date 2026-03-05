@@ -78,6 +78,51 @@ func (r *router) handleAddCorporation(w http.ResponseWriter, req *http.Request) 
 	w.WriteHeader(http.StatusCreated)
 }
 
+func (r *router) handlePatchCorporationDelegate(w http.ResponseWriter, req *http.Request) {
+	corpID, err := parseID(req, "id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid corporation id")
+		return
+	}
+	var body struct {
+		CharacterID int64 `json:"character_id"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil || body.CharacterID == 0 {
+		writeError(w, http.StatusBadRequest, "character_id is required")
+		return
+	}
+	ctx := req.Context()
+	if _, err := r.q.GetCorporation(ctx, corpID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "corporation not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to get corporation")
+		return
+	}
+	char, err := r.q.GetCharacter(ctx, body.CharacterID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusBadRequest, "character does not belong to this corporation")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to get character")
+		return
+	}
+	if char.CorporationID != corpID {
+		writeError(w, http.StatusBadRequest, "character does not belong to this corporation")
+		return
+	}
+	if err := r.q.UpdateCorporationDelegate(ctx, store.UpdateCorporationDelegateParams{
+		DelegateID: body.CharacterID,
+		ID:         corpID,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update delegate")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (r *router) handleDeleteCorporation(w http.ResponseWriter, req *http.Request) {
 	id, err := parseID(req, "id")
 	if err != nil {

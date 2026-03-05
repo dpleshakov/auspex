@@ -195,3 +195,125 @@ func TestDeleteCorporation_InvalidID(t *testing.T) {
 		t.Errorf("expected 400, got %d", rr.Code)
 	}
 }
+
+func TestPatchDelegate_OK(t *testing.T) {
+	var updated store.UpdateCorporationDelegateParams
+	mock := &mockQuerier{
+		GetCorporationFn: func(_ context.Context, id int64) (store.Corporation, error) {
+			return store.Corporation{ID: id, DelegateID: 1}, nil
+		},
+		GetCharacterFn: func(_ context.Context, id int64) (store.Character, error) {
+			return store.Character{ID: id, CorporationID: 100}, nil
+		},
+		UpdateCorporationDelegateFn: func(_ context.Context, arg store.UpdateCorporationDelegateParams) error {
+			updated = arg
+			return nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	body := `{"character_id":42}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/100/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d: %s", rr.Code, rr.Body.String())
+	}
+	if updated.ID != 100 || updated.DelegateID != 42 {
+		t.Errorf("update params = %+v, want {ID:100 DelegateID:42}", updated)
+	}
+}
+
+func TestPatchDelegate_CorporationNotFound(t *testing.T) {
+	mock := &mockQuerier{
+		GetCorporationFn: func(_ context.Context, _ int64) (store.Corporation, error) {
+			return store.Corporation{}, sql.ErrNoRows
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	body := `{"character_id":42}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/100/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rr.Code)
+	}
+}
+
+func TestPatchDelegate_CharacterNotInCorporation(t *testing.T) {
+	mock := &mockQuerier{
+		GetCorporationFn: func(_ context.Context, id int64) (store.Corporation, error) {
+			return store.Corporation{ID: id}, nil
+		},
+		GetCharacterFn: func(_ context.Context, id int64) (store.Character, error) {
+			// Character belongs to a different corporation
+			return store.Character{ID: id, CorporationID: 999}, nil
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	body := `{"character_id":42}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/100/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestPatchDelegate_CharacterNotFound(t *testing.T) {
+	mock := &mockQuerier{
+		GetCorporationFn: func(_ context.Context, id int64) (store.Corporation, error) {
+			return store.Corporation{ID: id}, nil
+		},
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{}, sql.ErrNoRows
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	body := `{"character_id":42}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/100/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestPatchDelegate_MissingCharacterID(t *testing.T) {
+	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/100/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
+
+func TestPatchDelegate_InvalidID(t *testing.T) {
+	mux := NewRouter(&mockQuerier{}, nil, nil, testFS())
+
+	body := `{"character_id":42}`
+	req := httptest.NewRequest(http.MethodPatch, "/api/corporations/notanumber/delegate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rr.Code)
+	}
+}
