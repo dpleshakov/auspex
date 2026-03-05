@@ -16,5 +16,9 @@ ORDER BY c.name;
 INSERT INTO corporations (id, name, delegate_id)
 VALUES (?, ?, ?);
 
+-- name: InsertOrIgnoreCorporation :exec
+INSERT OR IGNORE INTO corporations (id, name, delegate_id)
+VALUES (?, ?, ?);
+
 -- name: DeleteCorporation :exec
 DELETE FROM corporations WHERE id = ?;

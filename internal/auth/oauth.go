@@ -160,6 +160,16 @@ func (p *Provider) HandleCallback(ctx context.Context, code, state string) (int6
 		return 0, fmt.Errorf("saving character %d: %w", char.CharacterID, err)
 	}
 
+	if !isNPCCorporation(charInfo.CorporationID) {
+		if err := p.store.InsertOrIgnoreCorporation(ctx, store.InsertOrIgnoreCorporationParams{
+			ID:         charInfo.CorporationID,
+			Name:       corpInfo.Name,
+			DelegateID: char.CharacterID,
+		}); err != nil {
+			return 0, fmt.Errorf("saving corporation %d: %w", charInfo.CorporationID, err)
+		}
+	}
+
 	return char.CharacterID, nil
 }
 
@@ -267,6 +277,13 @@ func (p *Provider) callVerify(ctx context.Context, accessToken string) (verifyRe
 // can share the same credentials for automatic token refresh.
 func (p *Provider) OAuthConfig() *oauth2.Config {
 	return p.conf
+}
+
+// isNPCCorporation reports whether the given EVE corporation ID belongs to an
+// NPC corporation. NPC corp IDs occupy the range 1000000–2000000 inclusive.
+// Player corps fall outside this range and must be tracked in the corporations table.
+func isNPCCorporation(corpID int64) bool {
+	return corpID >= 1_000_000 && corpID <= 2_000_000
 }
 
 // randomState generates a cryptographically random 32-character hex string.

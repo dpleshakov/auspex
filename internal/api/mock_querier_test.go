@@ -84,6 +84,10 @@ func (m *mockQuerier) InsertCorporation(ctx context.Context, arg store.InsertCor
 	return nil
 }
 
+func (m *mockQuerier) InsertOrIgnoreCorporation(_ context.Context, _ store.InsertOrIgnoreCorporationParams) error {
+	return nil
+}
+
 func (m *mockQuerier) DeleteCorporation(ctx context.Context, id int64) error {
 	if m.DeleteCorporationFn != nil {
 		return m.DeleteCorporationFn(ctx, id)

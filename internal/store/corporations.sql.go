@@ -56,6 +56,22 @@ func (q *Queries) InsertCorporation(ctx context.Context, arg InsertCorporationPa
 	return err
 }
 
+const insertOrIgnoreCorporation = `-- name: InsertOrIgnoreCorporation :exec
+INSERT OR IGNORE INTO corporations (id, name, delegate_id)
+VALUES (?, ?, ?)
+`
+
+type InsertOrIgnoreCorporationParams struct {
+	ID         int64
+	Name       string
+	DelegateID int64
+}
+
+func (q *Queries) InsertOrIgnoreCorporation(ctx context.Context, arg InsertOrIgnoreCorporationParams) error {
+	_, err := q.db.ExecContext(ctx, insertOrIgnoreCorporation, arg.ID, arg.Name, arg.DelegateID)
+	return err
+}
+
 const listCorporations = `-- name: ListCorporations :many
 SELECT c.id, c.name, c.delegate_id, ch.name AS delegate_name, c.created_at
 FROM corporations c
