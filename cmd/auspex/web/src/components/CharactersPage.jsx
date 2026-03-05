@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getCharacters, getCorporations, patchDelegate, deleteCharacter } from '../api/client.js'
+import { getCharacters, getCorporations, patchDelegate, deleteCharacter, getBlueprints, getSyncStatus } from '../api/client.js'
 
 const NPC_CORP_MIN = 1_000_000
 const NPC_CORP_MAX = 2_000_000
@@ -8,17 +8,33 @@ function isNpcCorp(id) {
   return id >= NPC_CORP_MIN && id <= NPC_CORP_MAX
 }
 
+function formatLastSync(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
 export default function CharactersPage() {
   // null = initial load not complete yet
   const [characters, setCharacters] = useState(null)
   const [corporations, setCorporations] = useState(null)
+  const [blueprints, setBlueprints] = useState(null)
+  const [syncStatuses, setSyncStatuses] = useState(null)
   const [error, setError] = useState(null)
 
   const loadData = useCallback(async () => {
     try {
-      const [chars, corps] = await Promise.all([getCharacters(), getCorporations()])
+      const [chars, corps, bps, syncs] = await Promise.all([
+        getCharacters(),
+        getCorporations(),
+        getBlueprints(),
+        getSyncStatus(),
+      ])
       setCharacters(chars ?? [])
       setCorporations(corps ?? [])
+      setBlueprints(bps ?? [])
+      setSyncStatuses(syncs ?? [])
       setError(null)
     } catch (err) {
       setError(err.message)
@@ -71,6 +87,25 @@ export default function CharactersPage() {
     return <div className="chars-page__error">Error: {error}</div>
   }
 
+  // Precompute blueprint counts per character
+  const bpCountByChar = {}
+  for (const bp of (blueprints ?? [])) {
+    if (bp.owner_type === 'character') {
+      bpCountByChar[bp.owner_id] = (bpCountByChar[bp.owner_id] ?? 0) + 1
+    }
+  }
+
+  // Precompute last sync per character (max last_sync across all their endpoints)
+  const lastSyncByChar = {}
+  for (const s of (syncStatuses ?? [])) {
+    if (s.owner_type === 'character') {
+      const existing = lastSyncByChar[s.owner_id]
+      if (!existing || new Date(s.last_sync) > new Date(existing)) {
+        lastSyncByChar[s.owner_id] = s.last_sync
+      }
+    }
+  }
+
   // Group characters by corporation_id, preserving insertion order.
   const corpsMap = new Map((corporations ?? []).map(c => [c.id, c]))
   const groups = new Map()
@@ -79,21 +114,24 @@ export default function CharactersPage() {
     groups.get(char.corporation_id).push(char)
   }
 
+  const groupEntries = [...groups.entries()]
+
   return (
     <div className="chars-page">
-      {groups.size === 0 ? (
+      {groupEntries.length === 0 ? (
         <div className="chars-page__empty">
-          No characters added. <a href="/auth/eve/login">Add a character</a> to get started.
+          <p className="chars-page__empty-text">No characters added yet. Add a character to get started.</p>
+          <a className="chars-page__add-btn" href="/auth/eve/login">+ Add character</a>
         </div>
       ) : (
-        [...groups.entries()].map(([corpId, chars]) => {
+        groupEntries.map(([corpId, chars], index) => {
           const npc = isNpcCorp(corpId)
           const corpName = npc
             ? chars[0].corporation_name
             : (corpsMap.get(corpId)?.name ?? chars[0].corporation_name)
 
           return (
-            <div key={corpId} className="chars-group">
+            <div key={corpId} className={`chars-group${index < groupEntries.length - 1 ? ' chars-group--separated' : ''}`}>
               <div className="chars-group__header">{corpName}</div>
               <table className="chars-group__table">
                 <tbody>
@@ -102,14 +140,16 @@ export default function CharactersPage() {
                       <td className="chars-row__name">{char.name}</td>
                       {!npc && (
                         <td className="chars-row__delegate">
-                          <button
-                            className={`chars-delegate-btn${char.is_delegate ? ' chars-delegate-btn--active' : ''}`}
-                            title={char.is_delegate ? 'Current delegate' : 'Set as delegate'}
-                            disabled={char.is_delegate}
-                            onClick={() => handleSetDelegate(corpId, char.id)}
-                          >
-                            {char.is_delegate ? '●' : '○'}
-                          </button>
+                          {char.is_delegate ? (
+                            <span className="chars-delegate-label">● Delegate</span>
+                          ) : (
+                            <button
+                              className="chars-make-delegate-btn"
+                              onClick={() => handleSetDelegate(corpId, char.id)}
+                            >
+                              ○ Make delegate
+                            </button>
+                          )}
                           {char.sync_error && (
                             <span className="chars-row__sync-error" title={char.sync_error}>
                               ⚠ no access
@@ -117,6 +157,8 @@ export default function CharactersPage() {
                           )}
                         </td>
                       )}
+                      <td className="chars-row__blueprints">{bpCountByChar[char.id] ?? 0}</td>
+                      <td className="chars-row__last-sync">{formatLastSync(lastSyncByChar[char.id])}</td>
                       <td className="chars-row__actions">
                         <button
                           className="chars-delete-btn"
@@ -133,9 +175,6 @@ export default function CharactersPage() {
           )
         })
       )}
-      <div className="chars-page__footer">
-        <a className="app-add-char-link" href="/auth/eve/login">+ Add character</a>
-      </div>
     </div>
   )
 }

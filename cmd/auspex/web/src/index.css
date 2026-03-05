@@ -304,29 +304,46 @@ body {
 }
 
 .chars-page__empty {
-  padding: 40px 16px;
+  padding: 60px 16px;
   color: #555;
   font-size: 13px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.chars-page__empty a {
+.chars-page__empty-text {
+  margin: 0;
+}
+
+.chars-page__add-btn {
+  display: inline-block;
+  font-size: 12px;
   color: #5b9bd5;
   text-decoration: none;
+  border: 1px solid #2a4060;
+  padding: 6px 18px;
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+  transition: border-color 0.15s, color 0.15s;
 }
 
-.chars-page__empty a:hover {
-  text-decoration: underline;
-}
-
-.chars-page__footer {
-  padding-top: 8px;
+.chars-page__add-btn:hover {
+  color: #7ab8f0;
+  border-color: #4a6080;
 }
 
 .chars-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.chars-group--separated {
+  padding-bottom: 24px;
+  border-bottom: 1px solid #1e2530;
 }
 
 .chars-group__header {
@@ -357,32 +374,49 @@ body {
 
 .chars-row__delegate {
   white-space: nowrap;
-  min-width: 80px;
+  min-width: 120px;
 }
 
-.chars-delegate-btn {
+.chars-delegate-label {
+  color: #f0c040;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.chars-make-delegate-btn {
   background: none;
   border: none;
-  color: #888;
-  font-size: 14px;
+  color: #666;
+  font-size: 12px;
   cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
+  padding: 0;
+  letter-spacing: 0.02em;
+  transition: color 0.15s;
 }
 
-.chars-delegate-btn--active {
-  color: #f0c040;
-  cursor: default;
-}
-
-.chars-delegate-btn:not(:disabled):hover {
-  color: #c8c8c8;
+.chars-make-delegate-btn:hover {
+  color: #a0a0a0;
 }
 
 .chars-row__sync-error {
   color: #f0c040;
   font-size: 11px;
-  margin-left: 6px;
+  margin-left: 8px;
+}
+
+.chars-row__blueprints {
+  color: #888;
+  font-size: 13px;
+  min-width: 60px;
+  text-align: right;
+  padding-right: 20px;
+}
+
+.chars-row__last-sync {
+  color: #666;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
 .chars-row__actions {
