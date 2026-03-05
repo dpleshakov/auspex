@@ -110,7 +110,7 @@ Body: { "character_id": 12345678 }
 **Type:** Regular
 **Description:** Add a confirmation dialog to the [Delete] button on `CharactersPage`. Default message: "Delete character X? All their data will be removed." When the character is the last one in a player corporation: "Delete character X? This is the last character in corporation Y — the corporation and all its blueprints will also be deleted." Determine which message to show client-side: check if any other character in the loaded data shares the same `corporation_id`. On confirmation, call `DELETE /api/characters/{id}` and reload the page data.
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-09 `review-frontend`
 **Type:** Review
