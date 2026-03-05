@@ -1,6 +1,6 @@
 # 2026-03-05-tasks-characters-page.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -136,5 +136,13 @@ Body: { "character_id": 12345678 }
 - Replace the delegate dot indicator with a filled circle ● + text label `Delegate` for the delegate character (non-interactive). For all other characters in the same player corporation group, show an empty circle ○ + a `Make delegate` button — clicking it calls `PATCH /api/corporations/{id}/delegate` and reloads the page.
 - Add two columns to each character row: blueprint count (number of blueprints owned by this character, from already loaded blueprint data or a dedicated query) and last sync time (from `GET /api/sync/status` for this character).
 - Improve corporation group visual separation: add a bottom margin between groups and a subtle divider line so groups are clearly distinct when there are multiple corporations.
+**Definition of done:** working code + committed
+**Status:** ✅ Done
+
+### TASK-12 `characters-page-polish-2`
+**Type:** Regular
+**Description:** Further polish the Characters page. Changes:
+- Add a table header row above the character list with column labels: `Name`, `Role`, `Blueprints`, `Last Sync`. Header row should be visually distinct (e.g. smaller, muted color, uppercase).
+- Make corporation group headers more visually prominent: increase font size, apply the amber/gold accent color (matching the active tab style), and add sufficient top margin before each group to clearly separate it from the previous one.
 **Definition of done:** working code + committed
 **Status:** ⬜ Pending
