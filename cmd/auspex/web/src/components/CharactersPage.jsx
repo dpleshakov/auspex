@@ -36,9 +36,23 @@ export default function CharactersPage() {
     }
   }
 
-  async function handleDelete(characterId) {
+  async function handleDelete(char) {
+    const otherSameCorp = characters.filter(c => c.id !== char.id && c.corporation_id === char.corporation_id)
+    const isLastInPlayerCorp = otherSameCorp.length === 0 && !isNpcCorp(char.corporation_id)
+
+    let message
+    if (isLastInPlayerCorp) {
+      const corp = corporations.find(c => c.id === char.corporation_id)
+      const corpName = corp?.name ?? char.corporation_name
+      message = `Delete character ${char.name}? This is the last character in corporation ${corpName} — the corporation and all its blueprints will also be deleted.`
+    } else {
+      message = `Delete character ${char.name}? All their data will be removed.`
+    }
+
+    if (!window.confirm(message)) return
+
     try {
-      await deleteCharacter(characterId)
+      await deleteCharacter(char.id)
       loadData()
     } catch (err) {
       setError(err.message)
@@ -102,7 +116,7 @@ export default function CharactersPage() {
                       <td className="chars-row__actions">
                         <button
                           className="chars-delete-btn"
-                          onClick={() => handleDelete(char.id)}
+                          onClick={() => handleDelete(char)}
                         >
                           Delete
                         </button>
