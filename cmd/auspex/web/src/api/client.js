@@ -44,6 +44,10 @@ export function deleteCorporation(id) {
   return request('DELETE', `/api/corporations/${id}`)
 }
 
+export function patchDelegate(corporationId, characterId) {
+  return request('PATCH', `/api/corporations/${corporationId}/delegate`, { character_id: characterId })
+}
+
 // Blueprints
 
 // filters: { status?, owner_id?, owner_type?, category_id? }

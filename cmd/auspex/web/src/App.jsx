@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import SummaryBar from './components/SummaryBar.jsx'
 import CharactersSection from './components/CharactersSection.jsx'
 import BlueprintTable from './components/BlueprintTable.jsx'
+import CharactersPage from './components/CharactersPage.jsx'
 import { getBlueprints, getJobsSummary, postSync, getSyncStatus } from './api/client.js'
 
 const AUTO_REFRESH_MS = 10 * 60 * 1000  // 10 minutes
@@ -140,7 +141,7 @@ export default function App() {
           <BlueprintTable blueprints={blueprints} />
         </>
       ) : (
-        <p>Characters</p>
+        <CharactersPage />
       )}
     </div>
   )

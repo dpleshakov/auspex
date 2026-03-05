@@ -280,6 +280,132 @@ body {
 }
 
 /* ============================================================
+   CharactersPage
+   ============================================================ */
+
+.chars-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.chars-page__loading {
+  padding: 40px 16px;
+  color: #555;
+  font-size: 14px;
+  text-align: center;
+}
+
+.chars-page__error {
+  padding: 16px;
+  color: #d9534f;
+  font-size: 13px;
+}
+
+.chars-page__empty {
+  padding: 40px 16px;
+  color: #555;
+  font-size: 13px;
+  text-align: center;
+}
+
+.chars-page__empty a {
+  color: #5b9bd5;
+  text-decoration: none;
+}
+
+.chars-page__empty a:hover {
+  text-decoration: underline;
+}
+
+.chars-page__footer {
+  padding-top: 8px;
+}
+
+.chars-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chars-group__header {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #666;
+  font-weight: 600;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #1e2530;
+}
+
+.chars-group__table {
+  border-collapse: collapse;
+  font-size: 13px;
+  width: 100%;
+}
+
+.chars-row td {
+  padding: 6px 12px 6px 0;
+  vertical-align: middle;
+}
+
+.chars-row__name {
+  color: #c8c8c8;
+  min-width: 180px;
+}
+
+.chars-row__delegate {
+  white-space: nowrap;
+  min-width: 80px;
+}
+
+.chars-delegate-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.chars-delegate-btn--active {
+  color: #f0c040;
+  cursor: default;
+}
+
+.chars-delegate-btn:not(:disabled):hover {
+  color: #c8c8c8;
+}
+
+.chars-row__sync-error {
+  color: #f0c040;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.chars-row__actions {
+  text-align: right;
+}
+
+.chars-delete-btn {
+  background: none;
+  border: 1px solid #3a2020;
+  color: #884444;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+}
+
+.chars-delete-btn:hover {
+  border-color: #7a2020;
+  color: #d9534f;
+}
+
+/* ============================================================
    BlueprintTable
    ============================================================ */
 
