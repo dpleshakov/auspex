@@ -5,6 +5,7 @@
 package store
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -73,5 +74,5 @@ type SyncState struct {
 	Endpoint   string
 	LastSync   time.Time
 	CacheUntil time.Time
-	LastError  *string
+	LastError  sql.NullString
 }
