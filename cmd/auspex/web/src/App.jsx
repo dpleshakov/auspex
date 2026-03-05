@@ -8,13 +8,15 @@ const AUTO_REFRESH_MS = 10 * 60 * 1000  // 10 minutes
 const SYNC_POLL_MS = 2000               // 2 s between force-refresh polls
 const SYNC_POLL_MAX_MS = 60_000         // give up waiting after 60 s
 
+const TABS = { BLUEPRINTS: 'blueprints', CHARACTERS: 'characters' }
+
 export default function App() {
   const [blueprints, setBlueprints] = useState(null)
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [activeTab, setActiveTab] = useState('blueprints')
+  const [activeTab, setActiveTab] = useState(TABS.BLUEPRINTS)
 
   const syncPollRef = useRef(null)
 
@@ -91,6 +93,8 @@ export default function App() {
     }, SYNC_POLL_MS)
   }
 
+  const tabClass = (tab) => `app-tab${activeTab === tab ? ' app-tab--active' : ''}`
+
   return (
     <div className="app">
       <header className="app-header">
@@ -105,14 +109,14 @@ export default function App() {
           </button>
           <nav className="app-tabs">
             <button
-              className={`app-tab${activeTab === 'blueprints' ? ' app-tab--active' : ''}`}
-              onClick={() => setActiveTab('blueprints')}
+              className={tabClass(TABS.BLUEPRINTS)}
+              onClick={() => setActiveTab(TABS.BLUEPRINTS)}
             >
               Blueprints
             </button>
             <button
-              className={`app-tab${activeTab === 'characters' ? ' app-tab--active' : ''}`}
-              onClick={() => setActiveTab('characters')}
+              className={tabClass(TABS.CHARACTERS)}
+              onClick={() => setActiveTab(TABS.CHARACTERS)}
             >
               Characters
             </button>
@@ -129,7 +133,7 @@ export default function App() {
         <div className="app-loading">Loading…</div>
       ) : error ? (
         <div className="app-error">Error: {error}</div>
-      ) : activeTab === 'blueprints' ? (
+      ) : activeTab === TABS.BLUEPRINTS ? (
         <>
           <SummaryBar summary={summary} />
           <CharactersSection summary={summary} />
