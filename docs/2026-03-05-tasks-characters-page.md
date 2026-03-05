@@ -104,7 +104,7 @@ Body: { "character_id": 12345678 }
 **Type:** Regular
 **Description:** Implement the Characters tab content in `App.jsx` (replacing the placeholder added in `tab-navigation`). Extract into a new `CharactersPage` component. The component fetches `GET /api/characters` and `GET /api/corporations`, then groups characters by `corporation_id`. For each player corporation group: corporation name as the group header (from corporations response); each character row shows name, delegate indicator (● if `is_delegate`, otherwise ○ — clicking ○ calls `PATCH /api/corporations/{id}/delegate` and reloads), a `⚠ no access` warning next to the delegate indicator if `sync_error != null`, and a [Delete] button. For each NPC corporation group (ID in range 1000000–2000000): use `corporation_name` from the character data as the group header (NPC corporations are not in the `GET /api/corporations` response); character rows show only name and [Delete] button — no delegate indicator. Add `patchDelegate(corporationId, characterId)` to `cmd/auspex/web/src/api/client.js`. [+ Add character] button at the bottom linking to `/auth/eve/login`.
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-08 `delete-confirmation`
 **Type:** Regular
