@@ -7,8 +7,9 @@ FROM sync_state
 WHERE owner_type = ? AND owner_id = ? AND endpoint = ?;
 
 -- name: UpdateSyncStateError :exec
-UPDATE sync_state SET last_error = ?
-WHERE owner_type = ? AND owner_id = ? AND endpoint = ?;
+INSERT INTO sync_state (owner_type, owner_id, endpoint, last_sync, cache_until, last_error)
+VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?)
+ON CONFLICT(owner_type, owner_id, endpoint) DO UPDATE SET last_error = excluded.last_error;
 
 -- name: UpsertSyncState :exec
 INSERT INTO sync_state (owner_type, owner_id, endpoint, last_sync, cache_until)

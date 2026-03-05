@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"time"
 
@@ -101,7 +103,12 @@ func (r *router) handleDeleteCharacter(w http.ResponseWriter, req *http.Request)
 		} else {
 			// Others remain — reassign delegate if this character holds it.
 			corp, err := r.q.GetCorporation(ctx, corpID)
-			if err == nil && corp.DelegateID == id {
+			if err != nil {
+				if !errors.Is(err, sql.ErrNoRows) {
+					writeError(w, http.StatusInternalServerError, "failed to get corporation")
+					return
+				}
+			} else if corp.DelegateID == id {
 				if err := r.q.UpdateCorporationDelegate(ctx, store.UpdateCorporationDelegateParams{
 					DelegateID: others[0].ID,
 					ID:         corpID,

@@ -98,7 +98,7 @@ Body: { "character_id": 12345678 }
 - Code: security, error handling, readability, obvious performance issues
 - Security: input validation, no tokens in logs, errors do not expose internal details, dependency vulnerability check
 - Documentation: verify `technical-reference.md` matches reality — update if not; verify `architecture.md` — update if needed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-07 `characters-page`
 **Type:** Regular
