@@ -13,11 +13,12 @@ import (
 
 // mockQuerier implements store.Querier for tests.
 // Embed the interface so unimplemented methods panic clearly if called.
-// Only UpsertCharacter is overridden because it is the only method called by auth.
 type mockQuerier struct {
 	store.Querier
-	upsertCalled bool
-	upsertParams store.UpsertCharacterParams
+	upsertCalled             bool
+	upsertParams             store.UpsertCharacterParams
+	insertOrIgnoreCorpCalled bool
+	insertOrIgnoreCorpParams store.InsertOrIgnoreCorporationParams
 }
 
 // addCharCorpHandlers registers /characters/{id}/ and /corporations/{id}/ handlers
@@ -41,6 +42,12 @@ func addCharCorpHandlers(t *testing.T, mux *http.ServeMux, corporationID int64, 
 func (m *mockQuerier) UpsertCharacter(ctx context.Context, arg store.UpsertCharacterParams) error {
 	m.upsertCalled = true
 	m.upsertParams = arg
+	return nil
+}
+
+func (m *mockQuerier) InsertOrIgnoreCorporation(_ context.Context, arg store.InsertOrIgnoreCorporationParams) error {
+	m.insertOrIgnoreCorpCalled = true
+	m.insertOrIgnoreCorpParams = arg
 	return nil
 }
 
@@ -316,5 +323,73 @@ func TestHandleCallback_ValidFlow(t *testing.T) {
 	p.mu.Unlock()
 	if stillPresent {
 		t.Fatal("state was not removed after successful callback")
+	}
+
+	// 98000001 is a player corp — InsertOrIgnoreCorporation must be called.
+	if !mq.insertOrIgnoreCorpCalled {
+		t.Fatal("InsertOrIgnoreCorporation was not called for player corporation")
+	}
+	if mq.insertOrIgnoreCorpParams.ID != 98000001 {
+		t.Errorf("corp ID = %d, want 98000001", mq.insertOrIgnoreCorpParams.ID)
+	}
+	if mq.insertOrIgnoreCorpParams.DelegateID != 99999 {
+		t.Errorf("delegate ID = %d, want 99999 (the character ID)", mq.insertOrIgnoreCorpParams.DelegateID)
+	}
+	if mq.insertOrIgnoreCorpParams.Name != "Caldari State" {
+		t.Errorf("corp name = %q, want %q", mq.insertOrIgnoreCorpParams.Name, "Caldari State")
+	}
+}
+
+// TestHandleCallback_NPCCorporation verifies that NPC corporations (IDs 1000000–2000000)
+// are not inserted into the corporations table.
+func TestHandleCallback_NPCCorporation(t *testing.T) {
+	mq := &mockQuerier{}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]interface{}{
+			"access_token":  "access-npc",
+			"token_type":    "Bearer",
+			"refresh_token": "refresh-npc",
+			"expires_in":    3600,
+		})
+		if err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+	})
+	mux.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(verifyResponse{CharacterID: 11111, CharacterName: "NPCChar"})
+		if err != nil {
+			t.Fatalf("encode: %v", err)
+		}
+	})
+	// NPC corp ID within 1000000–2000000.
+	addCharCorpHandlers(t, mux, 1000182, "Center for Advanced Studies")
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	p := newTestProvider(t, ts.Client(), mq)
+	p.conf.Endpoint.TokenURL = ts.URL + "/token"
+	p.verifyURL = ts.URL + "/verify"
+	p.esiBaseURL = ts.URL
+
+	if _, err := p.GenerateAuthURL(); err != nil {
+		t.Fatal(err)
+	}
+	p.mu.Lock()
+	var state string
+	for s := range p.states {
+		state = s
+	}
+	p.mu.Unlock()
+
+	if _, err := p.HandleCallback(context.Background(), "npc-code", state); err != nil {
+		t.Fatalf("HandleCallback error: %v", err)
+	}
+
+	if mq.insertOrIgnoreCorpCalled {
+		t.Fatal("InsertOrIgnoreCorporation must not be called for NPC corporation")
 	}
 }

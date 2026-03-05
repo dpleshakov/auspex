@@ -34,6 +34,7 @@ type Querier interface {
 	InsertEveCategory(ctx context.Context, arg InsertEveCategoryParams) error
 	InsertEveGroup(ctx context.Context, arg InsertEveGroupParams) error
 	InsertEveType(ctx context.Context, arg InsertEveTypeParams) error
+	InsertOrIgnoreCorporation(ctx context.Context, arg InsertOrIgnoreCorporationParams) error
 	ListBlueprintTypeIDsByOwner(ctx context.Context, arg ListBlueprintTypeIDsByOwnerParams) ([]int64, error)
 	ListBlueprints(ctx context.Context, arg ListBlueprintsParams) ([]ListBlueprintsRow, error)
 	ListCharacterSlotUsage(ctx context.Context) ([]ListCharacterSlotUsageRow, error)

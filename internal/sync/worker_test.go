@@ -102,6 +102,9 @@ func (m *mockQuerier) GetEveType(_ context.Context, id int64) (store.EveType, er
 func (m *mockQuerier) InsertCorporation(_ context.Context, _ store.InsertCorporationParams) error {
 	panic("unexpected call to InsertCorporation")
 }
+func (m *mockQuerier) InsertOrIgnoreCorporation(_ context.Context, _ store.InsertOrIgnoreCorporationParams) error {
+	panic("unexpected call to InsertOrIgnoreCorporation")
+}
 func (m *mockQuerier) InsertEveCategory(_ context.Context, arg store.InsertEveCategoryParams) error {
 	if m.insertEveCategoryFunc != nil {
 		return m.insertEveCategoryFunc(arg)
