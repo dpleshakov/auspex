@@ -260,7 +260,10 @@ User → GET /auth/eve/login
      → EVE SSO → GET /auth/eve/callback?code=...
      → auth: exchange code for access_token + refresh_token
      → auth: GET /verify → character_id + name
-     → store: INSERT INTO characters
+     → esi: GET /characters/{id}/ → corporation_id + corporation_name
+     → store: INSERT INTO characters (with corporation_id, corporation_name)
+     → if player corporation (ID outside 1000000–2000000):
+         → store: INSERT OR IGNORE INTO corporations (with this character as delegate)
      → sync: trigger immediate sync for new character
      → 302 redirect to frontend
 ```
