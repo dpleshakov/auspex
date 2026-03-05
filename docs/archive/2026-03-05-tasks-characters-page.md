@@ -145,4 +145,4 @@ Body: { "character_id": 12345678 }
 - Add a table header row above the character list with column labels: `Name`, `Role`, `Blueprints`, `Last Sync`. Header row should be visually distinct (e.g. smaller, muted color, uppercase).
 - Make corporation group headers more visually prominent: increase font size, apply the amber/gold accent color (matching the active tab style), and add sufficient top margin before each group to clearly separate it from the previous one.
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done

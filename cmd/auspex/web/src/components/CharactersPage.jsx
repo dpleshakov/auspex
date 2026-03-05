@@ -131,9 +131,20 @@ export default function CharactersPage() {
             : (corpsMap.get(corpId)?.name ?? chars[0].corporation_name)
 
           return (
-            <div key={corpId} className={`chars-group${index < groupEntries.length - 1 ? ' chars-group--separated' : ''}`}>
-              <div className="chars-group__header">{corpName}</div>
+            <div key={corpId} className={`chars-group${index > 0 ? ' chars-group--top-margin' : ''}${index < groupEntries.length - 1 ? ' chars-group--separated' : ''}`}>
               <table className="chars-group__table">
+                <thead>
+                  <tr className="chars-corp-row">
+                    <th className="chars-corp-row__name" colSpan={npc ? 4 : 5}>{corpName}</th>
+                  </tr>
+                  <tr className="chars-thead">
+                    <th className="chars-thead__th chars-thead__th--name">Name</th>
+                    {!npc && <th className="chars-thead__th chars-thead__th--role">Role</th>}
+                    <th className="chars-thead__th chars-thead__th--blueprints">Blueprints</th>
+                    <th className="chars-thead__th chars-thead__th--last-sync">Last Sync</th>
+                    <th className="chars-thead__th"></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {chars.map(char => (
                     <tr key={char.id} className="chars-row">

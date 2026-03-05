@@ -341,25 +341,45 @@ body {
   gap: 8px;
 }
 
+.chars-group--top-margin {
+  margin-top: 32px;
+}
+
 .chars-group--separated {
   padding-bottom: 24px;
   border-bottom: 1px solid #1e2530;
 }
 
-.chars-group__header {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: #666;
+.chars-corp-row__name {
+  font-size: 14px;
   font-weight: 600;
-  padding-bottom: 6px;
-  border-bottom: 1px solid #1e2530;
+  color: #f0c040;
+  letter-spacing: 0.03em;
+  padding: 0 0 6px 0;
+  text-align: left;
 }
 
 .chars-group__table {
   border-collapse: collapse;
   font-size: 13px;
   width: 100%;
+}
+
+.chars-thead__th {
+  padding: 4px 12px 6px 0;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #555;
+  white-space: nowrap;
+  border-bottom: 1px solid #1e2530;
+}
+
+.chars-thead__th--blueprints {
+  text-align: right;
+  padding-right: 20px;
 }
 
 .chars-row td {
