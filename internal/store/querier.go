@@ -40,6 +40,7 @@ type Querier interface {
 	ListCharacterSlotUsage(ctx context.Context) ([]ListCharacterSlotUsageRow, error)
 	ListCharacters(ctx context.Context) ([]Character, error)
 	ListCharactersByCorporation(ctx context.Context, corporationID int64) ([]Character, error)
+	ListCharactersWithMeta(ctx context.Context) ([]ListCharactersWithMetaRow, error)
 	ListCorporations(ctx context.Context) ([]ListCorporationsRow, error)
 	ListJobIDsByOwner(ctx context.Context, arg ListJobIDsByOwnerParams) ([]int64, error)
 	ListSyncStatus(ctx context.Context) ([]ListSyncStatusRow, error)

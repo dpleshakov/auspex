@@ -347,6 +347,74 @@ func TestSyncJobs_NoStaleJobs(t *testing.T) {
 	}
 }
 
+// --- TestSyncSubject_ESIError_RecordsError ---
+// Verifies that when ESI returns an error, UpdateSyncStateError is called with the error message.
+func TestSyncSubject_ESIError_RecordsError(t *testing.T) {
+	var recordedError store.UpdateSyncStateErrorParams
+
+	q := &mockQuerier{
+		updateSyncStateErrorFunc: func(arg store.UpdateSyncStateErrorParams) error {
+			recordedError = arg
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		charBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return nil, time.Time{}, errors.New("ESI 503: service unavailable")
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCharacter, 1, endpointBlueprints)
+
+	if !recordedError.LastError.Valid {
+		t.Error("expected sync error to be recorded, got null")
+	}
+	if recordedError.LastError.String == "" {
+		t.Error("expected non-empty error message")
+	}
+	if recordedError.OwnerType != ownerTypeCharacter {
+		t.Errorf("OwnerType: got %q, want %q", recordedError.OwnerType, ownerTypeCharacter)
+	}
+	if recordedError.OwnerID != 1 {
+		t.Errorf("OwnerID: got %d, want 1", recordedError.OwnerID)
+	}
+	if recordedError.Endpoint != endpointBlueprints {
+		t.Errorf("Endpoint: got %q, want %q", recordedError.Endpoint, endpointBlueprints)
+	}
+}
+
+// --- TestSyncSubject_Success_ClearsError ---
+// Verifies that on a successful sync, UpdateSyncStateError is called with NULL to clear any previous error.
+func TestSyncSubject_Success_ClearsError(t *testing.T) {
+	var clearedError store.UpdateSyncStateErrorParams
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		updateSyncStateErrorFunc: func(arg store.UpdateSyncStateErrorParams) error {
+			clearedError = arg
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		charBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return nil, time.Now().Add(time.Minute), nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCharacter, 1, endpointBlueprints)
+
+	if clearedError.LastError.Valid {
+		t.Errorf("expected error to be cleared (null), got %q", clearedError.LastError.String)
+	}
+}
+
 // --- TestSyncJobs_UpsertError_ContinuesOtherJobs ---
 // Verifies that a UpsertJob FK error (e.g. manufacturing job whose BPC is not
 // in the blueprints table) does not abort the sync — remaining jobs are still

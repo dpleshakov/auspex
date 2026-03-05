@@ -14,6 +14,7 @@ package sync
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -173,6 +174,14 @@ func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int6
 
 	if err != nil {
 		log.Printf("sync: %s %s %d: %v", endpoint, ownerType, ownerID, err)
+		if uerr := w.store.UpdateSyncStateError(ctx, store.UpdateSyncStateErrorParams{
+			LastError: sql.NullString{String: err.Error(), Valid: true},
+			OwnerType: ownerType,
+			OwnerID:   ownerID,
+			Endpoint:  endpoint,
+		}); uerr != nil {
+			log.Printf("sync: recording error for %s %d %s: %v", ownerType, ownerID, endpoint, uerr)
+		}
 		return
 	}
 
@@ -184,6 +193,14 @@ func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int6
 		CacheUntil: cacheUntil,
 	}); err != nil {
 		log.Printf("sync: updating sync_state for %s %d %s: %v", ownerType, ownerID, endpoint, err)
+	}
+	if err := w.store.UpdateSyncStateError(ctx, store.UpdateSyncStateErrorParams{
+		LastError: sql.NullString{},
+		OwnerType: ownerType,
+		OwnerID:   ownerID,
+		Endpoint:  endpoint,
+	}); err != nil {
+		log.Printf("sync: clearing error for %s %d %s: %v", ownerType, ownerID, endpoint, err)
 	}
 }
 
