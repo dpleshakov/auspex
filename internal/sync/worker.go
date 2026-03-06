@@ -308,7 +308,7 @@ func (w *Worker) resolveTypeIDsList(ctx context.Context, typeIDs []int64) {
 
 const (
 	// npcStationMin and npcStationMax define the inclusive-exclusive range of
-	// resolvable NPC station IDs recognised by POST /universe/names/.
+	// resolvable NPC station IDs recognized by POST /universe/names/.
 	// EVE NPC station IDs are in [60_000_000, 64_000_000).
 	npcStationMin = int64(60_000_000)
 	npcStationMax = int64(64_000_000)
