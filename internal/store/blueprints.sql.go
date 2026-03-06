@@ -25,6 +25,40 @@ func (q *Queries) DeleteBlueprintsByOwner(ctx context.Context, arg DeleteBluepri
 	return err
 }
 
+const listBlueprintLocationIDsByOwner = `-- name: ListBlueprintLocationIDsByOwner :many
+SELECT DISTINCT location_id
+FROM blueprints
+WHERE owner_type = ? AND owner_id = ?
+`
+
+type ListBlueprintLocationIDsByOwnerParams struct {
+	OwnerType string
+	OwnerID   int64
+}
+
+func (q *Queries) ListBlueprintLocationIDsByOwner(ctx context.Context, arg ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, listBlueprintLocationIDsByOwner, arg.OwnerType, arg.OwnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var location_id int64
+		if err := rows.Scan(&location_id); err != nil {
+			return nil, err
+		}
+		items = append(items, location_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBlueprintTypeIDsByOwner = `-- name: ListBlueprintTypeIDsByOwner :many
 SELECT DISTINCT type_id
 FROM blueprints
@@ -72,6 +106,7 @@ SELECT
     g.category_id,
     cat.name AS category_name,
     b.location_id,
+    loc.name AS location_name,
     b.me_level,
     b.te_level,
     b.updated_at,
@@ -90,6 +125,7 @@ LEFT JOIN jobs j ON j.blueprint_id = b.id
 LEFT JOIN characters c ON b.owner_type = 'character' AND c.id = b.owner_id
 LEFT JOIN corporations corp ON b.owner_type = 'corporation' AND corp.id = b.owner_id
 LEFT JOIN characters ic ON ic.id = j.installer_id
+LEFT JOIN eve_locations loc ON loc.id = b.location_id
 WHERE
     (?1 IS NULL OR b.owner_type = ?1)
     AND (?2 IS NULL OR b.owner_id = ?2)
@@ -122,6 +158,7 @@ type ListBlueprintsRow struct {
 	CategoryID       int64
 	CategoryName     string
 	LocationID       int64
+	LocationName     sql.NullString
 	MeLevel          int64
 	TeLevel          int64
 	UpdatedAt        time.Time
@@ -160,6 +197,7 @@ func (q *Queries) ListBlueprints(ctx context.Context, arg ListBlueprintsParams) 
 			&i.CategoryID,
 			&i.CategoryName,
 			&i.LocationID,
+			&i.LocationName,
 			&i.MeLevel,
 			&i.TeLevel,
 			&i.UpdatedAt,

@@ -49,6 +49,12 @@ type EveGroup struct {
 	Name       string
 }
 
+type EveLocation struct {
+	ID         int64
+	Name       string
+	ResolvedAt time.Time
+}
+
 type EveType struct {
 	ID      int64
 	GroupID int64

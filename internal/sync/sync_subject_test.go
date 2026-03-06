@@ -13,11 +13,14 @@ import (
 // mockESIClient implements esi.Client for syncSubject tests.
 // Methods not relevant to a specific test panic if called.
 type mockESIClient struct {
-	charBlueprintsFunc  func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	corpBlueprintsFunc  func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	charJobsFunc        func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	corpJobsFunc        func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	getUniverseTypeFunc func(context.Context, int64) (esi.UniverseType, error)
+	charBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	corpBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	charJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	corpJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	getUniverseTypeFunc   func(context.Context, int64) (esi.UniverseType, error)
+	postUniverseNamesFunc func(context.Context, []int64) ([]esi.UniverseNamesEntry, error)
+	getUniverseStructFunc func(context.Context, int64, string) (esi.UniverseStructure, error)
+	getUniverseSystemFunc func(context.Context, int64) (string, error)
 }
 
 func (m *mockESIClient) GetCharacterBlueprints(ctx context.Context, id int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -53,6 +56,27 @@ func (m *mockESIClient) GetUniverseType(ctx context.Context, typeID int64) (esi.
 		return m.getUniverseTypeFunc(ctx, typeID)
 	}
 	panic("unexpected call to GetUniverseType")
+}
+
+func (m *mockESIClient) PostUniverseNames(ctx context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
+	if m.postUniverseNamesFunc != nil {
+		return m.postUniverseNamesFunc(ctx, ids)
+	}
+	panic("unexpected call to PostUniverseNames")
+}
+
+func (m *mockESIClient) GetUniverseStructure(ctx context.Context, id int64, token string) (esi.UniverseStructure, error) {
+	if m.getUniverseStructFunc != nil {
+		return m.getUniverseStructFunc(ctx, id, token)
+	}
+	panic("unexpected call to GetUniverseStructure")
+}
+
+func (m *mockESIClient) GetUniverseSystem(ctx context.Context, id int64) (string, error) {
+	if m.getUniverseSystemFunc != nil {
+		return m.getUniverseSystemFunc(ctx, id)
+	}
+	panic("unexpected call to GetUniverseSystem")
 }
 
 // Compile-time assertion: *mockESIClient must satisfy esi.Client.

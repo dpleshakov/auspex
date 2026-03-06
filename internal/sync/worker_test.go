@@ -34,6 +34,11 @@ type mockQuerier struct {
 	insertEveCategoryFunc           func(store.InsertEveCategoryParams) error
 	insertEveGroupFunc              func(store.InsertEveGroupParams) error
 	insertEveTypeFunc               func(store.InsertEveTypeParams) error
+
+	// location resolution
+	listBlueprintLocationIDsByOwnerFunc func(store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error)
+	getLocationFunc                     func(int64) (store.EveLocation, error)
+	insertLocationFunc                  func(store.InsertLocationParams) error
 }
 
 func (m *mockQuerier) ListCharacters(_ context.Context) ([]store.Character, error) {
@@ -181,6 +186,28 @@ func (m *mockQuerier) UpdateSyncStateError(_ context.Context, arg store.UpdateSy
 }
 func (m *mockQuerier) UpdateCorporationDelegate(_ context.Context, _ store.UpdateCorporationDelegateParams) error {
 	panic("unexpected call to UpdateCorporationDelegate")
+}
+
+func (m *mockQuerier) ListBlueprintLocationIDsByOwner(_ context.Context, arg store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+	if m.listBlueprintLocationIDsByOwnerFunc != nil {
+		return m.listBlueprintLocationIDsByOwnerFunc(arg)
+	}
+	// Default: empty list — resolveLocationIDs becomes a no-op, existing tests unaffected.
+	return nil, nil
+}
+
+func (m *mockQuerier) GetLocation(_ context.Context, id int64) (store.EveLocation, error) {
+	if m.getLocationFunc != nil {
+		return m.getLocationFunc(id)
+	}
+	panic("unexpected call to GetLocation")
+}
+
+func (m *mockQuerier) InsertLocation(_ context.Context, arg store.InsertLocationParams) error {
+	if m.insertLocationFunc != nil {
+		return m.insertLocationFunc(arg)
+	}
+	panic("unexpected call to InsertLocation")
 }
 
 // Compile-time assertion: *mockQuerier must satisfy store.Querier.

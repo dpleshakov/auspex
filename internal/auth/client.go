@@ -95,6 +95,22 @@ func (c *Client) GetUniverseType(ctx context.Context, typeID int64) (esi.Univers
 	return c.inner.GetUniverseType(ctx, typeID)
 }
 
+// GetUniverseStructure fetches a player-owned structure using the provided token.
+// The token should be a valid access token for a character with docking access.
+func (c *Client) GetUniverseStructure(ctx context.Context, structureID int64, token string) (esi.UniverseStructure, error) {
+	return c.inner.GetUniverseStructure(ctx, structureID, token)
+}
+
+// GetUniverseSystem fetches a solar system name. Public endpoint, no auth required.
+func (c *Client) GetUniverseSystem(ctx context.Context, systemID int64) (string, error) {
+	return c.inner.GetUniverseSystem(ctx, systemID)
+}
+
+// PostUniverseNames resolves a batch of EVE IDs to names. Public endpoint, no auth required.
+func (c *Client) PostUniverseNames(ctx context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
+	return c.inner.PostUniverseNames(ctx, ids)
+}
+
 // tokenForCharacter returns a valid access token for the character.
 // If the stored token is expired it is refreshed via OAuth2 and the updated
 // credentials are persisted to the store before being returned.

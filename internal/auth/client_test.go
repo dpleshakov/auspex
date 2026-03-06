@@ -87,6 +87,18 @@ func (m *mockESI) GetUniverseType(_ context.Context, _ int64) (esi.UniverseType,
 	return esi.UniverseType{}, nil
 }
 
+func (m *mockESI) GetUniverseStructure(_ context.Context, _ int64, _ string) (esi.UniverseStructure, error) {
+	return esi.UniverseStructure{}, nil
+}
+
+func (m *mockESI) GetUniverseSystem(_ context.Context, _ int64) (string, error) {
+	return "", nil
+}
+
+func (m *mockESI) PostUniverseNames(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
+	return nil, nil
+}
+
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------

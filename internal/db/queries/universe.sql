@@ -10,5 +10,11 @@ INSERT OR IGNORE INTO eve_groups (id, category_id, name) VALUES (?, ?, ?);
 -- name: InsertEveType :exec
 INSERT OR IGNORE INTO eve_types (id, group_id, name) VALUES (?, ?, ?);
 
+-- name: GetLocation :one
+SELECT id, name, resolved_at FROM eve_locations WHERE id = ?;
+
+-- name: InsertLocation :exec
+INSERT OR REPLACE INTO eve_locations (id, name, resolved_at) VALUES (?, ?, ?);
+
 -- name: GetEveType :one
 SELECT id, group_id, name FROM eve_types WHERE id = ?;

@@ -26,6 +26,7 @@ type blueprintJSON struct {
 	CategoryID   int64    `json:"category_id"`
 	CategoryName string   `json:"category_name"`
 	LocationID   int64    `json:"location_id"`
+	LocationName *string  `json:"location_name"`
 	MeLevel      int64    `json:"me_level"`
 	TeLevel      int64    `json:"te_level"`
 	Job          *jobJSON `json:"job"`
@@ -84,6 +85,10 @@ func (r *router) handleGetBlueprints(w http.ResponseWriter, req *http.Request) {
 
 	resp := make([]blueprintJSON, len(rows))
 	for i, row := range rows {
+		var locationName *string
+		if row.LocationName.Valid {
+			locationName = &row.LocationName.String
+		}
 		bp := blueprintJSON{
 			ID:           row.ID,
 			OwnerType:    row.OwnerType,
@@ -94,6 +99,7 @@ func (r *router) handleGetBlueprints(w http.ResponseWriter, req *http.Request) {
 			CategoryID:   row.CategoryID,
 			CategoryName: row.CategoryName,
 			LocationID:   row.LocationID,
+			LocationName: locationName,
 			MeLevel:      row.MeLevel,
 			TeLevel:      row.TeLevel,
 		}
