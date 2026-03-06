@@ -163,6 +163,50 @@ func TestSyncBlueprints_UpsertsAll(t *testing.T) {
 	}
 }
 
+// --- TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel ---
+// Verifies that blueprints with a corp office location_flag (e.g. CorpSAG1)
+// cause InsertLocation to be called with corpHangarSentinel during syncBlueprints,
+// so resolveLocationIDs never treats the office item ID as a player structure.
+func TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel(t *testing.T) {
+	const charID int64 = 42
+	const officeItemID int64 = 1_052_718_829_566
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		charBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return []esi.Blueprint{
+				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
+			}, time.Now().Add(time.Minute), nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCharacter, charID, endpointBlueprints)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call for corp hangar flag, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != corpHangarSentinel {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	}
+}
+
 // --- TestSyncJobs_UpsertAndPruneStale ---
 // Verifies that syncSubject upserts incoming jobs, deletes stale jobs (present
 // in store but absent from ESI response), and updates sync_state.

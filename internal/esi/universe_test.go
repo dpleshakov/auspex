@@ -273,6 +273,23 @@ func TestGetUniverseStructure_Returns403AsForbidden(t *testing.T) {
 	}
 }
 
+func TestGetUniverseStructure_Returns404AsNotFound(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"error":"Not found"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	_, err := c.GetUniverseStructure(context.Background(), 1052718829566, "tok")
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+	if errors.Is(err, ErrForbidden) {
+		t.Errorf("404 must not return ErrForbidden")
+	}
+}
+
 func TestGetUniverseStructure_Returns401AsForbidden(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)

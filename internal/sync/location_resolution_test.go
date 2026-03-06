@@ -325,6 +325,50 @@ func TestResolveLocationIDs_PostNames_LogsWarningOnPartialResponse(t *testing.T)
 	}
 }
 
+// --- TestResolveLocationIDs_Structure_404_StoresSentinel ---
+// Verifies that a 404 from GetUniverseStructure (corp office item ID >= 1T)
+// stores the sentinel name rather than leaving the location unresolved.
+func TestResolveLocationIDs_Structure_404_StoresSentinel(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_566 // >= 1T but a corp office item
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listCharsFunc: func() ([]store.Character, error) {
+			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
+		},
+		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+			return []int64{officeItemID}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		getUniverseStructFunc: func(_ context.Context, _ int64, _ string) (esi.UniverseStructure, error) {
+			return esi.UniverseStructure{}, esi.ErrNotFound
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call for 404 structure, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != corpHangarSentinel {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	}
+}
+
 // --- TestResolveLocationIDs_Structure_CachedSystemName ---
 // Verifies that the system name is fetched from eve_locations cache rather than ESI
 // when it was already resolved for a prior structure in the same system.

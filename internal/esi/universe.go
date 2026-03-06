@@ -15,6 +15,10 @@ var _ Client = (*httpClient)(nil)
 // character does not have access to the structure (ESI 403).
 var ErrForbidden = errors.New("ESI: 403 Forbidden")
 
+// ErrNotFound is returned by GetUniverseStructure when ESI returns 404,
+// indicating the ID is not a player structure (e.g. a corp office item ID).
+var ErrNotFound = errors.New("ESI: 404 Not Found")
+
 // UniverseType holds fully resolved EVE type data including group and category.
 // It is returned by GetUniverseType, which internally chains three ESI calls:
 //
@@ -142,6 +146,9 @@ func (c *httpClient) GetUniverseStructure(ctx context.Context, structureID int64
 	if err != nil {
 		if strings.Contains(err.Error(), "ESI status 403") || strings.Contains(err.Error(), "ESI status 401") {
 			return UniverseStructure{}, ErrForbidden
+		}
+		if strings.Contains(err.Error(), "ESI status 404") {
+			return UniverseStructure{}, ErrNotFound
 		}
 		return UniverseStructure{}, fmt.Errorf("fetching structure %d: %w", structureID, err)
 	}

@@ -10,21 +10,23 @@ import (
 // Blueprint represents a single BPO from the ESI blueprints endpoints.
 // BPCs (quantity != -1) are filtered out before being returned to the caller.
 type Blueprint struct {
-	ItemID     int64
-	TypeID     int64
-	LocationID int64
-	MELevel    int64
-	TELevel    int64
+	ItemID       int64
+	TypeID       int64
+	LocationID   int64
+	LocationFlag string
+	MELevel      int64
+	TELevel      int64
 }
 
 // esiBlueprintItem is the raw JSON shape returned by ESI.
 type esiBlueprintItem struct {
-	ItemID             int64 `json:"item_id"`
-	TypeID             int64 `json:"type_id"`
-	LocationID         int64 `json:"location_id"`
-	MaterialEfficiency int64 `json:"material_efficiency"`
-	TimeEfficiency     int64 `json:"time_efficiency"`
-	Quantity           int64 `json:"quantity"` // -1 = BPO, positive = BPC
+	ItemID             int64  `json:"item_id"`
+	TypeID             int64  `json:"type_id"`
+	LocationID         int64  `json:"location_id"`
+	LocationFlag       string `json:"location_flag"`
+	MaterialEfficiency int64  `json:"material_efficiency"`
+	TimeEfficiency     int64  `json:"time_efficiency"`
+	Quantity           int64  `json:"quantity"` // -1 = BPO, positive = BPC
 }
 
 // GetCharacterBlueprints fetches all BPOs owned by characterID.
@@ -63,11 +65,12 @@ func parseBlueprints(data []byte) ([]Blueprint, error) {
 			continue // BPC — skip
 		}
 		bps = append(bps, Blueprint{
-			ItemID:     item.ItemID,
-			TypeID:     item.TypeID,
-			LocationID: item.LocationID,
-			MELevel:    item.MaterialEfficiency,
-			TELevel:    item.TimeEfficiency,
+			ItemID:       item.ItemID,
+			TypeID:       item.TypeID,
+			LocationID:   item.LocationID,
+			LocationFlag: item.LocationFlag,
+			MELevel:      item.MaterialEfficiency,
+			TELevel:      item.TimeEfficiency,
 		})
 	}
 	return bps, nil
