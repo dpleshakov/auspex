@@ -140,7 +140,7 @@ func (c *httpClient) GetUniverseStructure(ctx context.Context, structureID int64
 	url := fmt.Sprintf("%s/universe/structures/%d/", c.baseURL, structureID)
 	body, _, err := c.do(ctx, url, token)
 	if err != nil {
-		if strings.Contains(err.Error(), "ESI status 403") {
+		if strings.Contains(err.Error(), "ESI status 403") || strings.Contains(err.Error(), "ESI status 401") {
 			return UniverseStructure{}, ErrForbidden
 		}
 		return UniverseStructure{}, fmt.Errorf("fetching structure %d: %w", structureID, err)

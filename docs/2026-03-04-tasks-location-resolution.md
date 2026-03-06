@@ -68,8 +68,16 @@ Steps:
 ### TASK-03 `review`
 **Type:** Review
 **Covers:** TASK-01, TASK-02
+**Description:**
+- Code: security, error handling, readability, obvious performance issues
+- Security: input validation, no tokens in logs, errors do not expose internal details, dependency vulnerability check
+- Documentation: verify `technical-reference.md` matches reality — update if not; verify `architecture.md` — update if needed
 **Status:** ⬜ Pending
 
 ### TASK-04 `docs`
 **Type:** Docs
+**Description:**
+- Update user-facing documentation (README, help, guides) if behaviour visible to the user has changed
+- Verify `technical-reference.md` is up to date — all API and schema changes introduced by this feature must be reflected
+- Update `CHANGELOG.md` — only user-visible changes, following the format in `process-changelog.md`
 **Status:** ⬜ Pending
