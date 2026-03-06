@@ -306,9 +306,22 @@ func (w *Worker) resolveTypeIDsList(ctx context.Context, typeIDs []int64) {
 	}
 }
 
-// npcStationThreshold separates NPC station IDs from player structure IDs.
-// IDs below this value are NPC stations; IDs at or above are player structures.
-const npcStationThreshold = int64(1_000_000_000_000)
+const (
+	// npcStationMin and npcStationMax define the inclusive-exclusive range of
+	// resolvable NPC station IDs recognised by POST /universe/names/.
+	// EVE NPC station IDs are in [60_000_000, 64_000_000).
+	npcStationMin = int64(60_000_000)
+	npcStationMax = int64(64_000_000)
+
+	// npcStationThreshold separates sub-trillion IDs from player structure IDs.
+	// IDs at or above this value are player-owned structures.
+	npcStationThreshold = int64(1_000_000_000_000)
+
+	// corpHangarSentinel is the display name stored for corporation office/hangar
+	// item IDs (range [64_000_000, 1_000_000_000_000)) that cannot be resolved
+	// via /universe/names/ and have no dedicated ESI lookup.
+	corpHangarSentinel = "Corporation Hangar"
+)
 
 // resolveLocationIDs resolves location_ids for all blueprints owned by ownerType/ownerID
 // and populates eve_locations with human-readable names.
@@ -328,6 +341,7 @@ func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, owner
 	}
 
 	var npcToResolve []int64
+	var corpHangarIDs []int64
 	var structureToResolve []int64
 
 	for _, id := range locationIDs {
@@ -337,10 +351,28 @@ func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, owner
 		if _, err := w.store.GetLocation(ctx, id); err == nil {
 			continue // already cached
 		}
-		if id < npcStationThreshold {
+		switch {
+		case id >= npcStationMin && id < npcStationMax:
 			npcToResolve = append(npcToResolve, id)
-		} else {
+		case id < npcStationThreshold:
+			// Corporation office/hangar item IDs — not resolvable via /universe/names/.
+			corpHangarIDs = append(corpHangarIDs, id)
+		default:
 			structureToResolve = append(structureToResolve, id)
+		}
+	}
+
+	// Store sentinel name for corporation office/hangar IDs.
+	if len(corpHangarIDs) > 0 {
+		now := w.now()
+		for _, id := range corpHangarIDs {
+			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+				ID:         id,
+				Name:       corpHangarSentinel,
+				ResolvedAt: now,
+			}); err != nil {
+				log.Printf("sync: inserting corp hangar location %d: %v", id, err)
+			}
 		}
 	}
 
@@ -350,6 +382,20 @@ func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, owner
 		if err != nil {
 			log.Printf("sync: PostUniverseNames for %s %d: %v", ownerType, ownerID, err)
 		} else {
+			if len(entries) < len(npcToResolve) {
+				returned := make(map[int64]bool, len(entries))
+				for _, e := range entries {
+					returned[e.ID] = true
+				}
+				var missing []int64
+				for _, id := range npcToResolve {
+					if !returned[id] {
+						missing = append(missing, id)
+					}
+				}
+				log.Printf("sync: PostUniverseNames returned %d of %d entries for %s %d; missing IDs: %v",
+					len(entries), len(npcToResolve), ownerType, ownerID, missing)
+			}
 			now := w.now()
 			for _, e := range entries {
 				if err := w.store.InsertLocation(ctx, store.InsertLocationParams{

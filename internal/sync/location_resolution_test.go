@@ -1,8 +1,12 @@
 package sync
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -208,6 +212,116 @@ func TestResolveLocationIDs_Structure_403_Skipped(t *testing.T) {
 
 	if insertCalled {
 		t.Error("InsertLocation must not be called for a 403 structure response")
+	}
+}
+
+// --- TestResolveLocationIDs_CorpOffice_NotSentToPostNames ---
+// Verifies that corporation office/hangar IDs ([64M, 1T)) are NOT sent to PostUniverseNames.
+func TestResolveLocationIDs_CorpOffice_NotSentToPostNames(t *testing.T) {
+	const officeID int64 = 100_000_000 // corp hangar range
+
+	postNamesCalled := false
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+			return []int64{officeID}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		postUniverseNamesFunc: func(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
+			postNamesCalled = true
+			return nil, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
+
+	if postNamesCalled {
+		t.Error("PostUniverseNames must not be called for corporation office/hangar IDs")
+	}
+}
+
+// --- TestResolveLocationIDs_CorpOffice_StoresSentinel ---
+// Verifies that corporation office/hangar IDs get the sentinel "Corporation Hangar" stored.
+func TestResolveLocationIDs_CorpOffice_StoresSentinel(t *testing.T) {
+	const officeID int64 = 200_000_000 // corp hangar range
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+			return []int64{officeID}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call for corp hangar, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeID)
+	}
+	if insertedLocations[0].Name != corpHangarSentinel {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	}
+}
+
+// --- TestResolveLocationIDs_PostNames_LogsWarningOnPartialResponse ---
+// Verifies that a warning is logged when PostUniverseNames returns fewer entries than requested.
+func TestResolveLocationIDs_PostNames_LogsWarningOnPartialResponse(t *testing.T) {
+	const stationA int64 = 60003760
+	const stationB int64 = 60000004
+
+	q := &mockQuerier{
+		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+			return []int64{stationA, stationB}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(_ store.InsertLocationParams) error { return nil },
+	}
+
+	esiMock := &mockESIClient{
+		// ESI only returns one of the two requested IDs.
+		postUniverseNamesFunc: func(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
+			return []esi.UniverseNamesEntry{
+				{ID: stationA, Name: "Jita IV - Moon 4 - Caldari Navy Assembly Plant", Category: "station"},
+			}, nil
+		},
+	}
+
+	var logBuf bytes.Buffer
+	log.SetOutput(&logBuf)
+	defer log.SetOutput(os.Stderr)
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
+
+	logged := logBuf.String()
+	if !strings.Contains(logged, "missing IDs") {
+		t.Errorf("expected warning about missing IDs in log, got: %q", logged)
 	}
 }
 
