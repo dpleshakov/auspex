@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [0.1.1] — 2026-03-06
+
 ### Added
 
 - Characters tab for managing connected characters and corporations: view characters grouped by corporation, reassign the corporation delegate, and remove characters.
