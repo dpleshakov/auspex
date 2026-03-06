@@ -21,6 +21,11 @@ SELECT DISTINCT type_id
 FROM blueprints
 WHERE owner_type = ? AND owner_id = ?;
 
+-- name: ListBlueprintLocationIDsByOwner :many
+SELECT DISTINCT location_id
+FROM blueprints
+WHERE owner_type = ? AND owner_id = ?;
+
 -- name: ListBlueprints :many
 SELECT
     b.id,
@@ -34,6 +39,7 @@ SELECT
     g.category_id,
     cat.name AS category_name,
     b.location_id,
+    loc.name AS location_name,
     b.me_level,
     b.te_level,
     b.updated_at,
@@ -52,6 +58,7 @@ LEFT JOIN jobs j ON j.blueprint_id = b.id
 LEFT JOIN characters c ON b.owner_type = 'character' AND c.id = b.owner_id
 LEFT JOIN corporations corp ON b.owner_type = 'corporation' AND corp.id = b.owner_id
 LEFT JOIN characters ic ON ic.id = j.installer_id
+LEFT JOIN eve_locations loc ON loc.id = b.location_id
 WHERE
     (sqlc.narg('owner_type') IS NULL OR b.owner_type = sqlc.narg('owner_type'))
     AND (sqlc.narg('owner_id') IS NULL OR b.owner_id = sqlc.narg('owner_id'))

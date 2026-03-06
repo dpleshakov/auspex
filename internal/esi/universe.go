@@ -3,11 +3,17 @@ package esi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 // Compile-time assertion: *httpClient implements Client.
 var _ Client = (*httpClient)(nil)
+
+// ErrForbidden is returned by GetUniverseStructure when the authenticated
+// character does not have access to the structure (ESI 403).
+var ErrForbidden = errors.New("ESI: 403 Forbidden")
 
 // UniverseType holds fully resolved EVE type data including group and category.
 // It is returned by GetUniverseType, which internally chains three ESI calls:
@@ -88,4 +94,81 @@ func (c *httpClient) GetUniverseType(ctx context.Context, typeID int64) (Univers
 		CategoryID:   groupResp.CategoryID,
 		CategoryName: catResp.Name,
 	}, nil
+}
+
+// UniverseNamesEntry is one item returned by POST /universe/names/.
+type UniverseNamesEntry struct {
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+}
+
+// PostUniverseNames resolves a batch of EVE IDs to names via POST /universe/names/.
+// This is a public endpoint (no auth required). Returns an empty slice for an empty input.
+func (c *httpClient) PostUniverseNames(ctx context.Context, ids []int64) ([]UniverseNamesEntry, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	reqBody, err := json.Marshal(ids)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling ids: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/universe/names/", c.baseURL)
+	body, err := c.doPost(ctx, url, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("posting universe/names: %w", err)
+	}
+
+	var entries []UniverseNamesEntry
+	if err := json.Unmarshal(body, &entries); err != nil {
+		return nil, fmt.Errorf("parsing universe/names response: %w", err)
+	}
+	return entries, nil
+}
+
+// UniverseStructure holds the fields we need from GET /universe/structures/{id}/.
+type UniverseStructure struct {
+	Name          string `json:"name"`
+	SolarSystemID int64  `json:"solar_system_id"`
+}
+
+// GetUniverseStructure fetches a player-owned structure by ID using an authenticated token.
+// Returns ErrForbidden if the character does not have docking access (403).
+func (c *httpClient) GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error) {
+	url := fmt.Sprintf("%s/universe/structures/%d/", c.baseURL, structureID)
+	body, _, err := c.do(ctx, url, token)
+	if err != nil {
+		if strings.Contains(err.Error(), "ESI status 403") {
+			return UniverseStructure{}, ErrForbidden
+		}
+		return UniverseStructure{}, fmt.Errorf("fetching structure %d: %w", structureID, err)
+	}
+
+	var s UniverseStructure
+	if err := json.Unmarshal(body, &s); err != nil {
+		return UniverseStructure{}, fmt.Errorf("parsing structure %d response: %w", structureID, err)
+	}
+	return s, nil
+}
+
+// esiSystemResponse is the minimal subset of GET /universe/systems/{id}/ we need.
+type esiSystemResponse struct {
+	Name string `json:"name"`
+}
+
+// GetUniverseSystem fetches the name of a solar system. Public endpoint, no token required.
+func (c *httpClient) GetUniverseSystem(ctx context.Context, systemID int64) (string, error) {
+	url := fmt.Sprintf("%s/universe/systems/%d/", c.baseURL, systemID)
+	body, _, err := c.do(ctx, url, "")
+	if err != nil {
+		return "", fmt.Errorf("fetching system %d: %w", systemID, err)
+	}
+
+	var s esiSystemResponse
+	if err := json.Unmarshal(body, &s); err != nil {
+		return "", fmt.Errorf("parsing system %d response: %w", systemID, err)
+	}
+	return s.Name, nil
 }

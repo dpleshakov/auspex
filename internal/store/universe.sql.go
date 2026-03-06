@@ -7,6 +7,7 @@ package store
 
 import (
 	"context"
+	"time"
 )
 
 const getEveType = `-- name: GetEveType :one
@@ -17,6 +18,17 @@ func (q *Queries) GetEveType(ctx context.Context, id int64) (EveType, error) {
 	row := q.db.QueryRowContext(ctx, getEveType, id)
 	var i EveType
 	err := row.Scan(&i.ID, &i.GroupID, &i.Name)
+	return i, err
+}
+
+const getLocation = `-- name: GetLocation :one
+SELECT id, name, resolved_at FROM eve_locations WHERE id = ?
+`
+
+func (q *Queries) GetLocation(ctx context.Context, id int64) (EveLocation, error) {
+	row := q.db.QueryRowContext(ctx, getLocation, id)
+	var i EveLocation
+	err := row.Scan(&i.ID, &i.Name, &i.ResolvedAt)
 	return i, err
 }
 
@@ -64,5 +76,20 @@ type InsertEveTypeParams struct {
 
 func (q *Queries) InsertEveType(ctx context.Context, arg InsertEveTypeParams) error {
 	_, err := q.db.ExecContext(ctx, insertEveType, arg.ID, arg.GroupID, arg.Name)
+	return err
+}
+
+const insertLocation = `-- name: InsertLocation :exec
+INSERT OR REPLACE INTO eve_locations (id, name, resolved_at) VALUES (?, ?, ?)
+`
+
+type InsertLocationParams struct {
+	ID         int64
+	Name       string
+	ResolvedAt time.Time
+}
+
+func (q *Queries) InsertLocation(ctx context.Context, arg InsertLocationParams) error {
+	_, err := q.db.ExecContext(ctx, insertLocation, arg.ID, arg.Name, arg.ResolvedAt)
 	return err
 }

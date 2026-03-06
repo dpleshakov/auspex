@@ -6,6 +6,7 @@
 package esi
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -36,7 +37,10 @@ type Client interface {
 	GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)
 	GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
 	GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
+	GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error)
+	GetUniverseSystem(ctx context.Context, systemID int64) (string, error)
 	GetUniverseType(ctx context.Context, typeID int64) (UniverseType, error)
+	PostUniverseNames(ctx context.Context, ids []int64) ([]UniverseNamesEntry, error)
 }
 
 // httpClient is the concrete implementation of Client.
@@ -129,6 +133,59 @@ func parseExpires(s string) time.Time {
 		return time.Now()
 	}
 	return t
+}
+
+// doPost executes a POST request to url with a JSON body (no auth token).
+// It applies the same retry logic as do(): retries on 429 and 5xx.
+// Returns the raw response body.
+func (c *httpClient) doPost(ctx context.Context, url string, body []byte) ([]byte, error) {
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, fmt.Errorf("building request: %w", err)
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.http.Do(req) //nolint:gosec // url is always constructed from a hardcoded base URL within this package
+		if err != nil {
+			return nil, fmt.Errorf("sending request: %w", err)
+		}
+
+		respBody, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("reading response body: %w", err)
+		}
+
+		switch {
+		case resp.StatusCode == http.StatusTooManyRequests:
+			if attempt == maxRetries {
+				return nil, fmt.Errorf("ESI 429 after %d retries", maxRetries)
+			}
+			c.sleep(parseRetryAfter(resp.Header.Get("Retry-After")))
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
+		case resp.StatusCode >= 500:
+			if attempt == maxRetries {
+				return nil, fmt.Errorf("ESI status %d after %d retries", resp.StatusCode, maxRetries)
+			}
+			c.sleep(time.Duration(1<<uint(attempt)) * time.Second)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+
+		case resp.StatusCode >= 400:
+			return nil, fmt.Errorf("ESI status %d: %s", resp.StatusCode, respBody)
+
+		default:
+			return respBody, nil
+		}
+	}
+
+	return nil, fmt.Errorf("ESI request failed after %d retries", maxRetries)
 }
 
 // parseRetryAfter parses the Retry-After header (integer seconds).

@@ -135,9 +135,9 @@ export default function BlueprintTable({ blueprints: externalBlueprints }) {
       header: 'Assigned',
     },
     {
-      accessorKey: 'location_id',
+      accessorKey: 'location_name',
       header: 'Location',
-      cell: ({ getValue }) => getValue() || '—',
+      cell: ({ getValue }) => getValue() ?? 'Resolving\u2026',
     },
     {
       accessorKey: 'me_level',

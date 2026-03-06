@@ -149,6 +149,18 @@ func (m *mockQuerier) GetEveType(_ context.Context, _ int64) (store.EveType, err
 	return store.EveType{}, nil
 }
 
+func (m *mockQuerier) GetLocation(_ context.Context, _ int64) (store.EveLocation, error) {
+	return store.EveLocation{}, nil
+}
+
+func (m *mockQuerier) InsertLocation(_ context.Context, _ store.InsertLocationParams) error {
+	return nil
+}
+
+func (m *mockQuerier) ListBlueprintLocationIDsByOwner(_ context.Context, _ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+	return nil, nil
+}
+
 func (m *mockQuerier) GetSyncState(_ context.Context, _ store.GetSyncStateParams) (store.SyncState, error) {
 	return store.SyncState{}, nil
 }

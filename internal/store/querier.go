@@ -25,6 +25,7 @@ type Querier interface {
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetCorporation(ctx context.Context, id int64) (Corporation, error)
 	GetEveType(ctx context.Context, id int64) (EveType, error)
+	GetLocation(ctx context.Context, id int64) (EveLocation, error)
 	// sqlc queries for the sync_state table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetSyncState(ctx context.Context, arg GetSyncStateParams) (SyncState, error)
@@ -34,7 +35,9 @@ type Querier interface {
 	InsertEveCategory(ctx context.Context, arg InsertEveCategoryParams) error
 	InsertEveGroup(ctx context.Context, arg InsertEveGroupParams) error
 	InsertEveType(ctx context.Context, arg InsertEveTypeParams) error
+	InsertLocation(ctx context.Context, arg InsertLocationParams) error
 	InsertOrIgnoreCorporation(ctx context.Context, arg InsertOrIgnoreCorporationParams) error
+	ListBlueprintLocationIDsByOwner(ctx context.Context, arg ListBlueprintLocationIDsByOwnerParams) ([]int64, error)
 	ListBlueprintTypeIDsByOwner(ctx context.Context, arg ListBlueprintTypeIDsByOwnerParams) ([]int64, error)
 	ListBlueprints(ctx context.Context, arg ListBlueprintsParams) ([]ListBlueprintsRow, error)
 	ListCharacterSlotUsage(ctx context.Context) ([]ListCharacterSlotUsageRow, error)

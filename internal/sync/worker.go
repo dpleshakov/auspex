@@ -15,6 +15,7 @@ package sync
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -164,6 +165,7 @@ func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int6
 		cacheUntil, err = w.syncBlueprints(ctx, ownerType, ownerID)
 		if err == nil {
 			w.resolveTypeIDs(ctx, ownerType, ownerID)
+			w.resolveLocationIDs(ctx, ownerType, ownerID)
 		}
 	case endpointJobs:
 		cacheUntil, err = w.syncJobs(ctx, ownerType, ownerID)
@@ -302,6 +304,134 @@ func (w *Worker) resolveTypeIDsList(ctx context.Context, typeIDs []int64) {
 			log.Printf("sync: inserting eve_type %d: %v", typeID, err)
 		}
 	}
+}
+
+// npcStationThreshold separates NPC station IDs from player structure IDs.
+// IDs below this value are NPC stations; IDs at or above are player structures.
+const npcStationThreshold = int64(1_000_000_000_000)
+
+// resolveLocationIDs resolves location_ids for all blueprints owned by ownerType/ownerID
+// and populates eve_locations with human-readable names.
+//
+// NPC stations (id < 1_000_000_000_000) are resolved in bulk via POST /universe/names/.
+// Player structures (id >= 1_000_000_000_000) are resolved individually via
+// GET /universe/structures/{id}/, paired with a system name lookup.
+// Already-cached IDs are skipped. 403 responses for structures are not cached.
+func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, ownerID int64) {
+	locationIDs, err := w.store.ListBlueprintLocationIDsByOwner(ctx, store.ListBlueprintLocationIDsByOwnerParams{
+		OwnerType: ownerType,
+		OwnerID:   ownerID,
+	})
+	if err != nil {
+		log.Printf("sync: listing blueprint location_ids for %s %d: %v", ownerType, ownerID, err)
+		return
+	}
+
+	var npcToResolve []int64
+	var structureToResolve []int64
+
+	for _, id := range locationIDs {
+		if ctx.Err() != nil {
+			return
+		}
+		if _, err := w.store.GetLocation(ctx, id); err == nil {
+			continue // already cached
+		}
+		if id < npcStationThreshold {
+			npcToResolve = append(npcToResolve, id)
+		} else {
+			structureToResolve = append(structureToResolve, id)
+		}
+	}
+
+	// Bulk-resolve NPC stations.
+	if len(npcToResolve) > 0 {
+		entries, err := w.esi.PostUniverseNames(ctx, npcToResolve)
+		if err != nil {
+			log.Printf("sync: PostUniverseNames for %s %d: %v", ownerType, ownerID, err)
+		} else {
+			now := w.now()
+			for _, e := range entries {
+				if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+					ID:         e.ID,
+					Name:       e.Name,
+					ResolvedAt: now,
+				}); err != nil {
+					log.Printf("sync: inserting location %d: %v", e.ID, err)
+				}
+			}
+		}
+	}
+
+	// Resolve player structures one by one.
+	if len(structureToResolve) > 0 {
+		token := w.anyCharacterToken(ctx)
+		if token == "" {
+			log.Printf("sync: no character token available for structure resolution")
+			return
+		}
+		for _, id := range structureToResolve {
+			if ctx.Err() != nil {
+				return
+			}
+			structure, err := w.esi.GetUniverseStructure(ctx, id, token)
+			if errors.Is(err, esi.ErrForbidden) {
+				log.Printf("sync: structure %d: 403 access denied, skipping cache", id)
+				continue
+			}
+			if err != nil {
+				log.Printf("sync: fetching structure %d: %v", id, err)
+				continue
+			}
+
+			systemName, err := w.getSystemName(ctx, structure.SolarSystemID)
+			if err != nil {
+				log.Printf("sync: fetching system %d for structure %d: %v", structure.SolarSystemID, id, err)
+				continue
+			}
+
+			displayName := systemName + " \u2014 " + structure.Name
+			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+				ID:         id,
+				Name:       displayName,
+				ResolvedAt: w.now(),
+			}); err != nil {
+				log.Printf("sync: inserting structure location %d: %v", id, err)
+			}
+		}
+	}
+}
+
+// getSystemName returns the name of a solar system, using eve_locations as a cache.
+// If the system name is not cached, it is fetched from ESI and stored.
+func (w *Worker) getSystemName(ctx context.Context, systemID int64) (string, error) {
+	if loc, err := w.store.GetLocation(ctx, systemID); err == nil {
+		return loc.Name, nil
+	}
+
+	name, err := w.esi.GetUniverseSystem(ctx, systemID)
+	if err != nil {
+		return "", err
+	}
+
+	if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+		ID:         systemID,
+		Name:       name,
+		ResolvedAt: w.now(),
+	}); err != nil {
+		log.Printf("sync: caching system name %d: %v", systemID, err)
+	}
+	return name, nil
+}
+
+// anyCharacterToken returns the access token of any available character,
+// or empty string if no characters are registered.
+func (w *Worker) anyCharacterToken(ctx context.Context) string {
+	chars, err := w.store.ListCharacters(ctx)
+	if err != nil || len(chars) == 0 {
+		return ""
+	}
+	return chars[0].AccessToken
 }
 
 // resolveTypeIDs loads type_ids already stored for the given owner and calls
