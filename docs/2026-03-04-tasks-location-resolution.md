@@ -89,7 +89,7 @@ Steps:
 - Sentinel name for office IDs ("Corporation Hangar") is intentionally generic — resolving the actual station from an office item ID requires additional ESI calls (`POST /corporations/{id}/assets/locations/`) which is out of scope for this fix.
 - Do not change 403-handling for player structures — this task only affects the ID classification for sub-1T IDs.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
