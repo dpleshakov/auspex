@@ -259,23 +259,90 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 		}
 	}
 
-	// Pre-cache sentinel for blueprints in corporation office/hangar slots.
-	// These location_ids are office item IDs not resolvable via any ESI endpoint;
-	// caching them now prevents resolveLocationIDs from treating them as structures.
-	for _, bp := range bps {
-		if !corpHangarFlags[bp.LocationFlag] {
-			continue
+	// For corp blueprints, resolve office item IDs to real station names via /offices/.
+	// Character blueprints do not use CorpSAG flags, so skip for ownerTypeCharacter.
+	if ownerType == ownerTypeCorporation {
+		seen := make(map[int64]bool)
+		var officeIDs []int64
+		for _, bp := range bps {
+			if corpHangarFlags[bp.LocationFlag] && !seen[bp.LocationID] {
+				seen[bp.LocationID] = true
+				officeIDs = append(officeIDs, bp.LocationID)
+			}
 		}
-		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
-			ID:         bp.LocationID,
-			Name:       corpHangarSentinel,
-			ResolvedAt: now,
-		}); err != nil {
-			log.Printf("sync: pre-caching corp hangar location %d: %v", bp.LocationID, err)
+		if len(officeIDs) > 0 {
+			w.resolveCorpOfficeLocations(ctx, ownerID, officeIDs, now)
 		}
 	}
 
 	return cacheUntil, nil
+}
+
+// resolveCorpOfficeLocations resolves corp office item IDs to NPC station names
+// using GET /corporations/{id}/offices/ and POST /universe/names/.
+// On error (e.g. token lacks the required scope), falls back to corpHangarSentinel.
+func (w *Worker) resolveCorpOfficeLocations(ctx context.Context, corpID int64, officeItemIDs []int64, now time.Time) {
+	offices, err := w.esi.GetCorporationOffices(ctx, corpID, "")
+	if err != nil {
+		log.Printf("sync: corp %d: fetching offices: %v; storing sentinels", corpID, err)
+		for _, id := range officeItemIDs {
+			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+				ID:         id,
+				Name:       corpHangarSentinel,
+				ResolvedAt: now,
+			}); err != nil {
+				log.Printf("sync: inserting corp hangar sentinel %d: %v", id, err)
+			}
+		}
+		return
+	}
+
+	// Build office_item_id → station_id map.
+	officeToStation := make(map[int64]int64, len(offices))
+	for _, o := range offices {
+		officeToStation[o.OfficeID] = o.StationID
+	}
+
+	// Collect unique station IDs to resolve.
+	stationSet := make(map[int64]bool)
+	for _, id := range officeItemIDs {
+		if sid, ok := officeToStation[id]; ok {
+			stationSet[sid] = true
+		}
+	}
+	stationIDs := make([]int64, 0, len(stationSet))
+	for sid := range stationSet {
+		stationIDs = append(stationIDs, sid)
+	}
+
+	// Resolve station names via universe/names.
+	stationNames := make(map[int64]string)
+	if len(stationIDs) > 0 {
+		if entries, err := w.esi.PostUniverseNames(ctx, stationIDs); err != nil {
+			log.Printf("sync: corp %d: resolving station names for offices: %v", corpID, err)
+		} else {
+			for _, e := range entries {
+				stationNames[e.ID] = e.Name
+			}
+		}
+	}
+
+	// Insert location for each office item ID.
+	for _, id := range officeItemIDs {
+		name := corpHangarSentinel
+		if sid, ok := officeToStation[id]; ok {
+			if n, ok := stationNames[sid]; ok {
+				name = n
+			}
+		}
+		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+			ID:         id,
+			Name:       name,
+			ResolvedAt: now,
+		}); err != nil {
+			log.Printf("sync: inserting office location %d: %v", id, err)
+		}
+	}
 }
 
 // resolveTypeIDsList ensures that every type_id in the provided slice has a

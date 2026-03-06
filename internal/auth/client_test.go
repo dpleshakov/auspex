@@ -109,6 +109,10 @@ func (m *mockESI) PostUniverseNames(_ context.Context, _ []int64) ([]esi.Univers
 	return nil, nil
 }
 
+func (m *mockESI) GetCorporationOffices(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
+	return nil, nil
+}
+
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
