@@ -17,8 +17,8 @@ lint:
 	go mod tidy
 	golangci-lint run
 
-# Full CI-equivalent check: lint + build + diff verification. Requires a clean worktree.
-check: lint build
+# Full CI-equivalent check: build + lint + diff verification. Requires a clean worktree.
+check: build lint
 	git diff --exit-code internal/store/ go.mod go.sum
 
 # ── Test ──────────────────────────────────────────────────────────────────────
