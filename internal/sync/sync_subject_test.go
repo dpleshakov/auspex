@@ -298,6 +298,9 @@ func TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError(t *test
 		},
 		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
 		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		getLocationFunc: func(_ int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
 		insertLocationFunc: func(arg store.InsertLocationParams) error {
 			insertedLocations = append(insertedLocations, arg)
 			return nil
@@ -326,6 +329,126 @@ func TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError(t *test
 	}
 	if insertedLocations[0].Name != corpHangarSentinel {
 		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	}
+}
+
+// --- TestSyncBlueprints_CorpHangarFlag_CitadelOffice_ResolvesViaStructure ---
+// Verifies that when /offices/ returns a structure ID (>= 1T) as station_id,
+// the office item ID is resolved via GetUniverseStructure to "System — StructureName".
+func TestSyncBlueprints_CorpHangarFlag_CitadelOffice_ResolvesViaStructure(t *testing.T) {
+	const corpID int64 = 99
+	const officeItemID int64 = 1_052_718_829_566
+	const structureID int64 = 1_000_000_000_001
+	const systemID int64 = 30000142
+	const wantName = "Jita \u2014 Keepstar"
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		listCharsFunc: func() ([]store.Character, error) {
+			return []store.Character{{ID: 1, AccessToken: "tok"}}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			if id == systemID {
+				return store.EveLocation{ID: id, Name: "Jita"}, nil
+			}
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return []esi.Blueprint{
+				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
+			}, time.Now().Add(time.Minute), nil
+		},
+		getCorporationOfficesFunc: func(_ context.Context, id int64, _ string) ([]esi.CorporationOffice, error) {
+			if id != corpID {
+				t.Errorf("GetCorporationOffices: unexpected corpID %d", id)
+			}
+			return []esi.CorporationOffice{
+				{OfficeID: officeItemID, StationID: structureID},
+			}, nil
+		},
+		postUniverseNamesFunc: func(_ context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
+			// structureID is not resolvable via universe/names — return empty.
+			return nil, nil
+		},
+		getUniverseStructFunc: func(_ context.Context, id int64, _ string) (esi.UniverseStructure, error) {
+			if id != structureID {
+				t.Errorf("GetUniverseStructure: unexpected id %d", id)
+			}
+			return esi.UniverseStructure{Name: "Keepstar", SolarSystemID: systemID}, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != wantName {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, wantName)
+	}
+}
+
+// --- TestSyncBlueprints_CorpHangarFlag_ErrorPathPreservesCachedName ---
+// Verifies that when GetCorporationOffices fails and the office item ID already
+// has a cached real name, InsertLocation is NOT called (cached name is preserved).
+func TestSyncBlueprints_CorpHangarFlag_ErrorPathPreservesCachedName(t *testing.T) {
+	const corpID int64 = 99
+	const officeItemID int64 = 1_052_718_829_566
+	const cachedName = "Jita IV - Moon 4 - Caldari Navy Assembly Plant"
+
+	insertLocationCalled := false
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			if id == officeItemID {
+				return store.EveLocation{ID: id, Name: cachedName}, nil
+			}
+			return store.EveLocation{}, errors.New("not found")
+		},
+		insertLocationFunc: func(_ store.InsertLocationParams) error {
+			insertLocationCalled = true
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return []esi.Blueprint{
+				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
+			}, time.Now().Add(time.Minute), nil
+		},
+		getCorporationOfficesFunc: func(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
+			return nil, errors.New("ESI status 503: Service Unavailable")
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
+
+	if insertLocationCalled {
+		t.Error("InsertLocation must NOT be called when a cached real name exists")
 	}
 }
 

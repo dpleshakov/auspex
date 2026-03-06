@@ -284,8 +284,12 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 func (w *Worker) resolveCorpOfficeLocations(ctx context.Context, corpID int64, officeItemIDs []int64, now time.Time) {
 	offices, err := w.esi.GetCorporationOffices(ctx, corpID, "")
 	if err != nil {
-		log.Printf("sync: corp %d: fetching offices: %v; storing sentinels", corpID, err)
+		log.Printf("sync: corp %d: fetching offices: %v; storing sentinels for uncached IDs", corpID, err)
 		for _, id := range officeItemIDs {
+			// Bug 2 fix: don't overwrite a previously resolved real name.
+			if _, err := w.store.GetLocation(ctx, id); err == nil {
+				continue
+			}
 			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
 				ID:         id,
 				Name:       corpHangarSentinel,
@@ -315,7 +319,7 @@ func (w *Worker) resolveCorpOfficeLocations(ctx context.Context, corpID int64, o
 		stationIDs = append(stationIDs, sid)
 	}
 
-	// Resolve station names via universe/names.
+	// Resolve NPC station names via universe/names.
 	stationNames := make(map[int64]string)
 	if len(stationIDs) > 0 {
 		if entries, err := w.esi.PostUniverseNames(ctx, stationIDs); err != nil {
@@ -327,12 +331,54 @@ func (w *Worker) resolveCorpOfficeLocations(ctx context.Context, corpID int64, o
 		}
 	}
 
+	// Bug 1 fix: resolve citadel/structure IDs (>= 1T) that PostUniverseNames cannot handle.
+	// Fetch a token lazily — only if there are unresolved structure IDs.
+	token := ""
+	for sid := range stationSet {
+		if sid < 1_000_000_000_000 {
+			continue
+		}
+		if _, ok := stationNames[sid]; ok {
+			continue
+		}
+		if token == "" {
+			token = w.anyCharacterToken(ctx)
+			if token == "" {
+				log.Printf("sync: corp %d: no character token available for structure resolution", corpID)
+				break
+			}
+		}
+		structure, err := w.esi.GetUniverseStructure(ctx, sid, token)
+		if errors.Is(err, esi.ErrForbidden) {
+			log.Printf("sync: corp %d: structure %d: access denied, skipping", corpID, sid)
+			continue
+		}
+		if err != nil {
+			log.Printf("sync: corp %d: fetching structure %d: %v", corpID, sid, err)
+			continue
+		}
+		systemName, err := w.getSystemName(ctx, structure.SolarSystemID)
+		if err != nil {
+			log.Printf("sync: corp %d: fetching system %d for structure %d: %v", corpID, structure.SolarSystemID, sid, err)
+			continue
+		}
+		stationNames[sid] = systemName + " \u2014 " + structure.Name
+	}
+
 	// Insert location for each office item ID.
 	for _, id := range officeItemIDs {
 		name := corpHangarSentinel
 		if sid, ok := officeToStation[id]; ok {
 			if n, ok := stationNames[sid]; ok {
 				name = n
+			}
+		} else {
+			log.Printf("sync: corp %d: office item %d not found in /offices/ response", corpID, id)
+		}
+		// Bug 3 fix: don't overwrite a cached real name with sentinel.
+		if name == corpHangarSentinel {
+			if _, err := w.store.GetLocation(ctx, id); err == nil {
+				continue
 			}
 		}
 		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
