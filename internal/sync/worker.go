@@ -250,7 +250,12 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 			TeLevel:    bp.TELevel,
 			UpdatedAt:  now,
 		}); err != nil {
-			return cacheUntil, fmt.Errorf("upserting blueprint %d: %w", bp.ItemID, err)
+			// A blueprint whose type_id is missing from eve_types (e.g. because
+			// type resolution failed due to a transient ESI error) fails the FK
+			// constraint. Log and skip so the rest of the blueprints are stored
+			// and sync_state is still updated. The next tick will retry resolution.
+			log.Printf("sync: blueprints %s %d: upserting blueprint %d: %v", ownerType, ownerID, bp.ItemID, err)
+			continue
 		}
 	}
 
