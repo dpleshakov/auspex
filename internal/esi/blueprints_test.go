@@ -114,6 +114,33 @@ func TestGetCorporationBlueprints_FiltersBPCs(t *testing.T) {
 	}
 }
 
+func TestGetCharacterBlueprints_ParsesLocationFlag(t *testing.T) {
+	payload := `[
+		{"item_id":1,"type_id":100,"location_id":1052718829566,"location_flag":"CorpSAG1","material_efficiency":10,"time_efficiency":20,"quantity":-1},
+		{"item_id":2,"type_id":200,"location_id":60000004,"location_flag":"Hangar","material_efficiency":5,"time_efficiency":12,"quantity":-1}
+	]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 2 {
+		t.Fatalf("expected 2 blueprints, got %d", len(bps))
+	}
+	if bps[0].LocationFlag != "CorpSAG1" {
+		t.Errorf("blueprint[0] LocationFlag: got %q, want CorpSAG1", bps[0].LocationFlag)
+	}
+	if bps[1].LocationFlag != "Hangar" {
+		t.Errorf("blueprint[1] LocationFlag: got %q, want Hangar", bps[1].LocationFlag)
+	}
+}
+
 func TestGetCorporationBlueprints_UsesCorrectURL(t *testing.T) {
 	var gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -254,6 +254,22 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 		}
 	}
 
+	// Pre-cache sentinel for blueprints in corporation office/hangar slots.
+	// These location_ids are office item IDs not resolvable via any ESI endpoint;
+	// caching them now prevents resolveLocationIDs from treating them as structures.
+	for _, bp := range bps {
+		if !corpHangarFlags[bp.LocationFlag] {
+			continue
+		}
+		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+			ID:         bp.LocationID,
+			Name:       corpHangarSentinel,
+			ResolvedAt: now,
+		}); err != nil {
+			log.Printf("sync: pre-caching corp hangar location %d: %v", bp.LocationID, err)
+		}
+	}
+
 	return cacheUntil, nil
 }
 
@@ -322,6 +338,15 @@ const (
 	// via /universe/names/ and have no dedicated ESI lookup.
 	corpHangarSentinel = "Corporation Hangar"
 )
+
+// corpHangarFlags are location_flag values that indicate a blueprint is stored
+// in a corporation office slot within an NPC station. The location_id in these
+// cases is the office item ID, which is not resolvable via any universe endpoint.
+var corpHangarFlags = map[string]bool{
+	"CorpSAG1": true, "CorpSAG2": true, "CorpSAG3": true,
+	"CorpSAG4": true, "CorpSAG5": true, "CorpSAG6": true, "CorpSAG7": true,
+	"CorpDeliveries": true,
+}
 
 // resolveLocationIDs resolves location_ids for all blueprints owned by ownerType/ownerID
 // and populates eve_locations with human-readable names.
@@ -423,6 +448,15 @@ func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, owner
 			structure, err := w.esi.GetUniverseStructure(ctx, id, token)
 			if errors.Is(err, esi.ErrForbidden) {
 				log.Printf("sync: structure %d: access denied, skipping cache", id)
+				continue
+			}
+			if errors.Is(err, esi.ErrNotFound) {
+				log.Printf("sync: structure %d: not found in ESI, storing sentinel", id)
+				_ = w.store.InsertLocation(ctx, store.InsertLocationParams{
+					ID:         id,
+					Name:       corpHangarSentinel,
+					ResolvedAt: w.now(),
+				})
 				continue
 			}
 			if err != nil {
