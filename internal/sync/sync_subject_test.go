@@ -13,14 +13,15 @@ import (
 // mockESIClient implements esi.Client for syncSubject tests.
 // Methods not relevant to a specific test panic if called.
 type mockESIClient struct {
-	charBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	corpBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	charJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	corpJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	getUniverseTypeFunc   func(context.Context, int64) (esi.UniverseType, error)
-	postUniverseNamesFunc func(context.Context, []int64) ([]esi.UniverseNamesEntry, error)
-	getUniverseStructFunc func(context.Context, int64, string) (esi.UniverseStructure, error)
-	getUniverseSystemFunc func(context.Context, int64) (string, error)
+	charBlueprintsFunc        func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	corpBlueprintsFunc        func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	charJobsFunc              func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	corpJobsFunc              func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	getUniverseTypeFunc       func(context.Context, int64) (esi.UniverseType, error)
+	postUniverseNamesFunc     func(context.Context, []int64) ([]esi.UniverseNamesEntry, error)
+	getUniverseStructFunc     func(context.Context, int64, string) (esi.UniverseStructure, error)
+	getUniverseSystemFunc     func(context.Context, int64) (string, error)
+	getCorporationOfficesFunc func(context.Context, int64, string) ([]esi.CorporationOffice, error)
 }
 
 func (m *mockESIClient) GetCharacterBlueprints(ctx context.Context, id int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -77,6 +78,13 @@ func (m *mockESIClient) GetUniverseSystem(ctx context.Context, id int64) (string
 		return m.getUniverseSystemFunc(ctx, id)
 	}
 	panic("unexpected call to GetUniverseSystem")
+}
+
+func (m *mockESIClient) GetCorporationOffices(ctx context.Context, id int64, token string) ([]esi.CorporationOffice, error) {
+	if m.getCorporationOfficesFunc != nil {
+		return m.getCorporationOfficesFunc(ctx, id, token)
+	}
+	panic("unexpected call to GetCorporationOffices")
 }
 
 // Compile-time assertion: *mockESIClient must satisfy esi.Client.
@@ -214,12 +222,72 @@ func TestSyncBlueprints_UpsertError_ContinuesOtherBlueprints(t *testing.T) {
 	}
 }
 
-// --- TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel ---
-// Verifies that blueprints with a corp office location_flag (e.g. CorpSAG1)
-// cause InsertLocation to be called with corpHangarSentinel during syncBlueprints,
-// so resolveLocationIDs never treats the office item ID as a player structure.
-func TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel(t *testing.T) {
-	const charID int64 = 42
+// --- TestSyncBlueprints_CorpHangarFlag_ResolvesStationName ---
+// Verifies that corp blueprints with a CorpSAG location_flag cause the office item ID
+// to be resolved to a real station name via GetCorporationOffices + PostUniverseNames.
+func TestSyncBlueprints_CorpHangarFlag_ResolvesStationName(t *testing.T) {
+	const corpID int64 = 99
+	const officeItemID int64 = 1_052_718_829_566
+	const stationID int64 = 60004588
+	const stationName = "Ibura IX - Moon 11 - Spacelane Patrol Testing Facilities"
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return []esi.Blueprint{
+				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
+			}, time.Now().Add(time.Minute), nil
+		},
+		getCorporationOfficesFunc: func(_ context.Context, id int64, _ string) ([]esi.CorporationOffice, error) {
+			if id != corpID {
+				t.Errorf("GetCorporationOffices: unexpected corpID %d", id)
+			}
+			return []esi.CorporationOffice{
+				{OfficeID: officeItemID, StationID: stationID},
+			}, nil
+		},
+		postUniverseNamesFunc: func(_ context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
+			if len(ids) != 1 || ids[0] != stationID {
+				t.Errorf("PostUniverseNames: unexpected ids %v", ids)
+			}
+			return []esi.UniverseNamesEntry{
+				{ID: stationID, Name: stationName},
+			}, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != stationName {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, stationName)
+	}
+}
+
+// --- TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError ---
+// Verifies that when GetCorporationOffices returns an error (e.g. missing scope),
+// InsertLocation is called with corpHangarSentinel as a fallback.
+func TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError(t *testing.T) {
+	const corpID int64 = 99
 	const officeItemID int64 = 1_052_718_829_566
 
 	var insertedLocations []store.InsertLocationParams
@@ -237,18 +305,21 @@ func TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel(t *testing.T) {
 	}
 
 	esiMock := &mockESIClient{
-		charBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
 			return []esi.Blueprint{
 				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
 			}, time.Now().Add(time.Minute), nil
 		},
+		getCorporationOfficesFunc: func(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
+			return nil, errors.New("ESI status 403: Forbidden")
+		},
 	}
 
 	w := New(q, esiMock, time.Minute)
-	w.syncSubject(context.Background(), ownerTypeCharacter, charID, endpointBlueprints)
+	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
 
 	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call for corp hangar flag, got %d", len(insertedLocations))
+		t.Fatalf("expected 1 InsertLocation call for fallback sentinel, got %d", len(insertedLocations))
 	}
 	if insertedLocations[0].ID != officeItemID {
 		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)

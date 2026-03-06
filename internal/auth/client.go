@@ -89,6 +89,17 @@ func (c *Client) GetCorporationJobs(ctx context.Context, corporationID int64, _ 
 	return c.inner.GetCorporationJobs(ctx, corporationID, token)
 }
 
+// GetCorporationOffices fetches offices rented by the given corporation,
+// using the delegate character's token (refreshed if needed).
+// The token parameter is ignored.
+func (c *Client) GetCorporationOffices(ctx context.Context, corporationID int64, _ string) ([]esi.CorporationOffice, error) {
+	token, err := c.tokenForCorporation(ctx, corporationID)
+	if err != nil {
+		return nil, fmt.Errorf("getting token for corporation %d: %w", corporationID, err)
+	}
+	return c.inner.GetCorporationOffices(ctx, corporationID, token)
+}
+
 // GetUniverseType delegates to the inner ESI client without token injection.
 // Universe endpoints are public and require no authorization.
 func (c *Client) GetUniverseType(ctx context.Context, typeID int64) (esi.UniverseType, error) {

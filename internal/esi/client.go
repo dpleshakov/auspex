@@ -37,6 +37,7 @@ type Client interface {
 	GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)
 	GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
 	GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
+	GetCorporationOffices(ctx context.Context, corporationID int64, token string) ([]CorporationOffice, error)
 	GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error)
 	GetUniverseSystem(ctx context.Context, systemID int64) (string, error)
 	GetUniverseType(ctx context.Context, typeID int64) (UniverseType, error)

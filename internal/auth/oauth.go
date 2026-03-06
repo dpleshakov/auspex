@@ -38,6 +38,7 @@ const (
 var eveScopes = []string{
 	"esi-characters.read_blueprints.v1",
 	"esi-corporations.read_blueprints.v1",
+	"esi-corporations.read_facilities.v1",
 	"esi-industry.read_character_jobs.v1",
 	"esi-industry.read_corporation_jobs.v1",
 	"esi-universe.read_structures.v1",
