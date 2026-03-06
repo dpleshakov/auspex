@@ -47,6 +47,7 @@ Go to [developers.eveonline.com](https://developers.eveonline.com/) and create a
   - `esi-corporations.read_blueprints.v1`
   - `esi-industry.read_character_jobs.v1`
   - `esi-industry.read_corporation_jobs.v1`
+  - `esi-universe.read_structures.v1`
 
 Copy the **Client ID** and **Secret Key**.
 

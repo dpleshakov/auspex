@@ -40,6 +40,7 @@ var eveScopes = []string{
 	"esi-corporations.read_blueprints.v1",
 	"esi-industry.read_character_jobs.v1",
 	"esi-industry.read_corporation_jobs.v1",
+	"esi-universe.read_structures.v1",
 }
 
 // verifyResponse is the JSON payload returned by EVE SSO /verify.

@@ -273,6 +273,20 @@ func TestGetUniverseStructure_Returns403AsForbidden(t *testing.T) {
 	}
 }
 
+func TestGetUniverseStructure_Returns401AsForbidden(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":"Unauthorized - Token is not valid for any required scope: esi-universe.read_structures.v1"}`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	_, err := c.GetUniverseStructure(context.Background(), 1000000000001, "tok")
+	if !errors.Is(err, ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
 func TestGetUniverseStructure_SendsAuthToken(t *testing.T) {
 	var gotAuth string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

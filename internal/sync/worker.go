@@ -376,7 +376,7 @@ func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, owner
 			}
 			structure, err := w.esi.GetUniverseStructure(ctx, id, token)
 			if errors.Is(err, esi.ErrForbidden) {
-				log.Printf("sync: structure %d: 403 access denied, skipping cache", id)
+				log.Printf("sync: structure %d: access denied, skipping cache", id)
 				continue
 			}
 			if err != nil {
