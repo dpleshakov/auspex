@@ -95,9 +95,14 @@ func (c *Client) GetUniverseType(ctx context.Context, typeID int64) (esi.Univers
 	return c.inner.GetUniverseType(ctx, typeID)
 }
 
-// GetUniverseStructure fetches a player-owned structure using the provided token.
-// The token should be a valid access token for a character with docking access.
-func (c *Client) GetUniverseStructure(ctx context.Context, structureID int64, token string) (esi.UniverseStructure, error) {
+// GetUniverseStructure fetches a player-owned structure.
+// The token parameter is ignored; a fresh token is obtained from any available
+// character and refreshed via OAuth2 if needed.
+func (c *Client) GetUniverseStructure(ctx context.Context, structureID int64, _ string) (esi.UniverseStructure, error) {
+	token, err := c.tokenForAnyCharacter(ctx)
+	if err != nil {
+		return esi.UniverseStructure{}, fmt.Errorf("getting token for structure %d: %w", structureID, err)
+	}
 	return c.inner.GetUniverseStructure(ctx, structureID, token)
 }
 
@@ -162,4 +167,18 @@ func (c *Client) tokenForCorporation(ctx context.Context, corporationID int64) (
 		return "", fmt.Errorf("loading corporation %d from store: %w", corporationID, err)
 	}
 	return c.tokenForCharacter(ctx, corp.DelegateID)
+}
+
+// tokenForAnyCharacter returns a valid access token for the first registered
+// character, refreshing via OAuth2 if needed. Used for public-structure lookups
+// that require an authenticated token but are not tied to a specific owner.
+func (c *Client) tokenForAnyCharacter(ctx context.Context) (string, error) {
+	chars, err := c.store.ListCharacters(ctx)
+	if err != nil {
+		return "", fmt.Errorf("listing characters: %w", err)
+	}
+	if len(chars) == 0 {
+		return "", fmt.Errorf("no characters registered")
+	}
+	return c.tokenForCharacter(ctx, chars[0].ID)
 }
