@@ -163,6 +163,57 @@ func TestSyncBlueprints_UpsertsAll(t *testing.T) {
 	}
 }
 
+// --- TestSyncBlueprints_UpsertError_ContinuesOtherBlueprints ---
+// Verifies that a UpsertBlueprint FK error (type_id missing from eve_types due to
+// transient ESI timeout) does not abort the sync — remaining blueprints are still
+// upserted and sync_state is updated.
+func TestSyncBlueprints_UpsertError_ContinuesOtherBlueprints(t *testing.T) {
+	const charID int64 = 42
+
+	bps := []esi.Blueprint{
+		// BP 1001: type 500 missing from eve_types → UpsertBlueprint fails with FK.
+		{ItemID: 1001, TypeID: 500, LocationID: 60000004, MELevel: 5, TELevel: 10},
+		// BP 1002: type 501 present → succeeds.
+		{ItemID: 1002, TypeID: 501, LocationID: 60000004, MELevel: 3, TELevel: 8},
+	}
+
+	var upsertedIDs []int64
+	syncStateUpdated := false
+
+	q := &mockQuerier{
+		getEveTypeFunc: func(id int64) (store.EveType, error) {
+			return store.EveType{ID: id}, nil
+		},
+		upsertBlueprintFunc: func(arg store.UpsertBlueprintParams) error {
+			if arg.ID == 1001 {
+				return errors.New("FOREIGN KEY constraint failed")
+			}
+			upsertedIDs = append(upsertedIDs, arg.ID)
+			return nil
+		},
+		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error {
+			syncStateUpdated = true
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		charBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
+			return bps, time.Now().Add(time.Minute), nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.syncSubject(context.Background(), ownerTypeCharacter, charID, endpointBlueprints)
+
+	if len(upsertedIDs) != 1 || upsertedIDs[0] != 1002 {
+		t.Errorf("expected blueprint 1002 to be upserted, got %v", upsertedIDs)
+	}
+	if !syncStateUpdated {
+		t.Error("sync_state must be updated even when some blueprint upserts are skipped")
+	}
+}
+
 // --- TestSyncBlueprints_CorpHangarFlag_PreCachesSentinel ---
 // Verifies that blueprints with a corp office location_flag (e.g. CorpSAG1)
 // cause InsertLocation to be called with corpHangarSentinel during syncBlueprints,
