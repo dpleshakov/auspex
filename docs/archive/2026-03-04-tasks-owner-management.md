@@ -1,6 +1,6 @@
 # 2026-03-04-tasks-owner-management.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -18,13 +18,13 @@ API client helpers `deleteCharacter(id)` and `deleteCorporation(id)` in `client.
 **Type:** Regular
 **Description:** Add UI controls for removing tracked characters and corporations. The backend `DELETE /api/characters/{id}` and `DELETE /api/corporations/{id}` endpoints are fully implemented (cascade-delete blueprints, jobs, sync_state, then the owner row; return 204). The API client helpers `deleteCharacter(id)` and `deleteCorporation(id)` in `client.js` also exist but are never called. What is missing: a delete button per row in `CharactersSection` (currently display-only); a corporations management section (`CorporationsSection`) with a per-row delete action. After a successful delete, both sections should reload their data and trigger `postSync()` to keep the blueprints table consistent.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ~~⬜ Pending~~ — obsolete, completed in another feature branch
 
 ### TASK-02 `add-corporation-form`
 **Type:** Regular
 **Description:** Add an add-corporation form to `CorporationsSection` (Corp ID, name, delegate character dropdown) so corporations can be added from the UI. The `POST /api/corporations` backend endpoint is implemented. Root cause of the current bug: OAuth callback saves only the character; `runCycle` → `ListCorporations` returns `[]` → corp blueprint sync loop never executes. Fix: add the form, and after a successful add call `postSync()` so blueprints appear without waiting for the next background tick.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ~~⬜ Pending~~ — obsolete, completed in another feature branch
 
 ### TASK-03 `review`
 **Type:** Review
@@ -33,7 +33,7 @@ API client helpers `deleteCharacter(id)` and `deleteCorporation(id)` in `client.
 - Code: security, error handling, readability, obvious performance issues
 - Security: input validation, no tokens in logs, errors do not expose internal details, dependency vulnerability check
 - Documentation: verify `technical-reference.md` matches reality — update if not; verify `architecture.md` — update if needed
-**Status:** ⬜ Pending
+**Status:** ~~⬜ Pending~~ — obsolete, completed in another feature branch
 
 ### TASK-04 `docs`
 **Type:** Docs
@@ -41,4 +41,4 @@ API client helpers `deleteCharacter(id)` and `deleteCorporation(id)` in `client.
 - Update user-facing documentation (README, help, guides) if behaviour visible to the user has changed
 - Verify `technical-reference.md` is up to date — all API and schema changes introduced by this feature must be reflected
 - Update `CHANGELOG.md` — only user-visible changes, following the format in `process-changelog.md`
-**Status:** ⬜ Pending
+**Status:** ~~⬜ Pending~~ — obsolete, completed in another feature branch
