@@ -52,15 +52,24 @@ func (m *mockQuerier) UpsertCharacter(_ context.Context, arg store.UpsertCharact
 	return nil
 }
 
+func (m *mockQuerier) ListCharacters(_ context.Context) ([]store.Character, error) {
+	out := make([]store.Character, 0, len(m.characters))
+	for _, c := range m.characters {
+		out = append(out, c)
+	}
+	return out, nil
+}
+
 // ---------------------------------------------------------------------------
 // mock ESI inner client
 // ---------------------------------------------------------------------------
 
 // mockESI records the token passed to each call and returns canned data.
 type mockESI struct {
-	blueprints []esi.Blueprint
-	cacheUntil time.Time
-	tokenSeen  string
+	blueprints      []esi.Blueprint
+	cacheUntil      time.Time
+	tokenSeen       string
+	structTokenSeen string
 }
 
 func (m *mockESI) GetCharacterBlueprints(_ context.Context, _ int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -87,8 +96,9 @@ func (m *mockESI) GetUniverseType(_ context.Context, _ int64) (esi.UniverseType,
 	return esi.UniverseType{}, nil
 }
 
-func (m *mockESI) GetUniverseStructure(_ context.Context, _ int64, _ string) (esi.UniverseStructure, error) {
-	return esi.UniverseStructure{}, nil
+func (m *mockESI) GetUniverseStructure(_ context.Context, _ int64, token string) (esi.UniverseStructure, error) {
+	m.structTokenSeen = token
+	return esi.UniverseStructure{Name: "Test Structure", SolarSystemID: 30000142}, nil
 }
 
 func (m *mockESI) GetUniverseSystem(_ context.Context, _ int64) (string, error) {
@@ -348,5 +358,44 @@ func TestClient_UniverseTypePassthrough(t *testing.T) {
 	// No store calls, no token seen (universe is public endpoint).
 	if inner.tokenSeen != "" {
 		t.Errorf("tokenSeen = %q, want empty (universe endpoint requires no token)", inner.tokenSeen)
+	}
+}
+
+// TestClient_GetUniverseStructure_RefreshesToken verifies that GetUniverseStructure
+// obtains a fresh token via OAuth2 for any registered character (ignoring any token
+// passed by the caller) and forwards the refreshed token to the inner ESI client.
+func TestClient_GetUniverseStructure_RefreshesToken(t *testing.T) {
+	srv := newTokenServer(t, "refreshed-struct-token", "new-refresh")
+
+	q := &mockQuerier{
+		characters: map[int64]store.Character{
+			42: {
+				ID:           42,
+				Name:         "Test Pilot",
+				AccessToken:  "stale-token",
+				RefreshToken: "old-refresh",
+				TokenExpiry:  time.Now().Add(-1 * time.Hour), // expired
+			},
+		},
+	}
+
+	inner := &mockESI{}
+	client := auth.NewClient(inner, q, newConf(srv.URL), srv.Client())
+
+	_, err := client.GetUniverseStructure(context.Background(), 1_000_000_000_001, "caller-supplied-token")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// The inner client must receive the refreshed token, not the caller-supplied one.
+	if inner.structTokenSeen != "refreshed-struct-token" {
+		t.Errorf("inner ESI structure token = %q, want %q", inner.structTokenSeen, "refreshed-struct-token")
+	}
+	// Refreshed token must be persisted.
+	if len(q.upsertCalls) != 1 {
+		t.Fatalf("UpsertCharacter called %d times, want 1", len(q.upsertCalls))
+	}
+	if q.upsertCalls[0].AccessToken != "refreshed-struct-token" {
+		t.Errorf("saved AccessToken = %q, want %q", q.upsertCalls[0].AccessToken, "refreshed-struct-token")
 	}
 }
