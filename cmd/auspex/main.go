@@ -98,6 +98,7 @@ func run() error {
 	// Start the sync worker in the background.
 	// The worker runs an initial cycle immediately, then ticks every RefreshInterval.
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
+	defer cancelWorker()
 	var wg stdsync.WaitGroup
 	wg.Add(1)
 	go func() {

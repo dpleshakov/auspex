@@ -8,6 +8,13 @@
 ## Database Schema
 
 ```sql
+-- Location name cache (NPC stations and player structures, populated lazily on first encounter)
+CREATE TABLE eve_locations (
+    id          INTEGER PRIMARY KEY,  -- EVE location_id (station or structure)
+    name        TEXT NOT NULL,
+    resolved_at DATETIME NOT NULL     -- last successful resolution timestamp
+);
+
 -- EVE universe reference data (populated lazily on first encounter)
 CREATE TABLE eve_categories (
     id    INTEGER PRIMARY KEY,  -- EVE category_id
@@ -308,6 +315,7 @@ Returns the BPO library. All query parameters are optional and combinable.
     "category_id": 9,
     "category_name": "Blueprint",
     "location_id": 60003760,
+    "location_name": "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
     "me_level": 10,
     "te_level": 20,
     "job": null
@@ -322,6 +330,7 @@ Returns the BPO library. All query parameters are optional and combinable.
     "category_id": 9,
     "category_name": "Blueprint",
     "location_id": 60003760,
+    "location_name": null,
     "me_level": 8,
     "te_level": 16,
     "job": {
@@ -347,7 +356,8 @@ Returns the BPO library. All query parameters are optional and combinable.
 | `type_name` | string | Resolved type name (e.g. `"Rifter Blueprint"`) |
 | `category_id` | integer | EVE category ID |
 | `category_name` | string | Resolved category name (e.g. `"Blueprint"`) |
-| `location_id` | integer | ESI location ID (raw; human-readable names are a post-MVP feature) |
+| `location_id` | integer | ESI location ID |
+| `location_name` | string or `null` | Human-readable location name; `null` while not yet resolved (shows "Resolving…" in the UI) |
 | `me_level` | integer | Material Efficiency level (0–10) |
 | `te_level` | integer | Time Efficiency level (0–20) |
 | `job` | object or `null` | Currently active or ready research job, or `null` if idle |

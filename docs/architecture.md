@@ -22,7 +22,7 @@
 | HTTP client (ESI) | standard net/http | — |
 | Static file embedding | standard embed | — |
 | Testing | standard testing | — |
-| Mocks | testify/mock | latest |
+| Mocks | handwritten mock structs | — |
 
 #### Frontend
 
@@ -70,9 +70,9 @@ A code generator: takes a SQL schema and SQL queries, generates typed Go code. S
 
 The official extended Go library for OAuth2. Handles the Authorization Code flow, automatic token refresh on expiry, and token storage. EVE SSO uses standard OAuth2 — the library fits without adaptation. The alternative (manual implementation) is possible but x/oauth2 already handles edge cases and is battle-tested in production.
 
-#### testify/mock
+#### Handwritten mock structs
 
-Go's standard `testing` package handles test execution and assertions. `testify/mock` adds interface-based mocking — necessary for testing `sync` and `api` in isolation without real ESI or SQLite. The alternative (manual mock structs) works but requires significant boilerplate for every interface. testify/mock generates this automatically and integrates cleanly with the standard `testing` package.
+Go's standard `testing` package handles test execution and assertions. Tests use handwritten mock structs that implement the `esi.Client` and `store.Querier` interfaces — each struct holds optional function fields for each method, panicking on unexpected calls. This approach keeps tests self-contained without external dependencies.
 
 #### React + Vite + TanStack Table
 
@@ -114,7 +114,6 @@ A BPO table with sorting, filters, highlighting, and periodic data refresh is ex
 - sqlc: https://docs.sqlc.dev (v2)
 - modernc.org/sqlite: https://pkg.go.dev/modernc.org/sqlite
 - golang.org/x/oauth2: https://pkg.go.dev/golang.org/x/oauth2
-- testify/mock: https://github.com/stretchr/testify
 - EVE ESI: https://esi.evetech.net/ui/
 - EVE SSO OAuth2: https://developers.eveonline.com/blog/article/sso-to-authenticated-calls
 - React: https://react.dev (v18+)
@@ -187,8 +186,13 @@ Endpoints used:
 - `GET /characters/{id}/industry/jobs`
 - `GET /corporations/{id}/blueprints`
 - `GET /corporations/{id}/industry/jobs`
+- `GET /corporations/{id}/offices/` (maps office item IDs to NPC station IDs)
 - `GET /universe/types/{type_id}`
-- `POST /universe/names/` (bulk resolve)
+- `GET /universe/groups/{group_id}`
+- `GET /universe/categories/{category_id}`
+- `POST /universe/names/` (bulk resolve NPC stations)
+- `GET /universe/structures/{id}/` (player-owned structures; authenticated)
+- `GET /universe/systems/{id}/` (solar system names; cached in `eve_locations`)
 
 #### `auth`
 OAuth2 flow for EVE SSO. Responsibility: generate the authorization URL, exchange code for tokens, refresh tokens on expiry, verify the character via `/verify`.
@@ -202,7 +206,7 @@ Starts as a goroutine at application startup. A ticker fires every N minutes (fr
 
 Receives a force-refresh signal via a channel from `api` — in this case ignores `cache_until`.
 
-After a successful sync, updates `sync_state` and triggers lazy resolution of any new `type_id`s via `esi`.
+After a successful blueprint sync, updates `sync_state` and triggers lazy resolution of any new `type_id`s and `location_id`s via `esi`. Location resolution covers NPC stations (via `POST /universe/names/`), player structures (via `GET /universe/structures/{id}/` + system name lookup), and corporation office item IDs (stored as sentinel "Corporation Hangar").
 
 #### `api`
 Chi router and HTTP handlers. Responsibility: accept HTTP requests, read data from `store`, return JSON responses. Never calls ESI directly.
@@ -225,7 +229,11 @@ type Client interface {
     GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
     GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)
     GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
+    GetCorporationOffices(ctx context.Context, corporationID int64, token string) ([]CorporationOffice, error)
+    GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error)
+    GetUniverseSystem(ctx context.Context, systemID int64) (string, error)
     GetUniverseType(ctx context.Context, typeID int64) (UniverseType, error)
+    PostUniverseNames(ctx context.Context, ids []int64) ([]UniverseNamesEntry, error)
 }
 ```
 
@@ -284,6 +292,11 @@ sync worker (ticker every N minutes)
       → for each new type_id not in eve_types:
           → esi: GET /universe/types/{type_id}
           → store: INSERT INTO eve_types + eve_groups + eve_categories
+      → for each location_id not yet in eve_locations:
+          → NPC stations (60M–64M): esi: POST /universe/names/ (bulk)
+          → player structures (>= 1T): esi: GET /universe/structures/{id}/ + GET /universe/systems/{id}/
+          → corp office item IDs ([64M, 1T)): store sentinel "Corporation Hangar"
+          → store: INSERT INTO eve_locations
       → store: UPDATE sync_state (last_sync, cache_until from Expires header)
 ```
 
@@ -293,8 +306,8 @@ sync worker (ticker every N minutes)
 Frontend (auto-poll every N minutes or manual refresh button)
   → GET /api/blueprints?filters...
   → api handler: store.ListBlueprints(filters)
-      → JOIN blueprints + jobs + eve_types + eve_groups + eve_categories
-  → return JSON array (blueprint with nested job object or null)
+      → JOIN blueprints + jobs + eve_types + eve_groups + eve_categories + eve_locations
+  → return JSON array (blueprint with nested job object or null; location_name null if not yet resolved)
 
   → GET /api/jobs/summary
   → api handler: store.GetSummary()
