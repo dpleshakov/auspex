@@ -23,9 +23,11 @@ check: build lint
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Runs Go tests only — quick feedback during development.
+# Runs Go tests with coverage — prints per-function table and enforces the 60% threshold.
 test:
-	go test ./...
+	go test -coverprofile=coverage.out ./...
+	go tool cover -func=coverage.out
+	go run tools/check-coverage.go 60
 
 # ── Release ───────────────────────────────────────────────────────────────────
 
