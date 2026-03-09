@@ -26,6 +26,7 @@ gracefully when no token is present, and save parsed Go structs as JSON fixtures
 - `compareFixture(t *testing.T, name string, got any)` — if `*update`: calls `saveFixture`; else: reads `testdata/{name}.json`, unmarshals into a value of the same type as `got`, compares with `cmp.Diff`; calls `t.Errorf` on diff
 
 **Definition of done:** file compiles with `-tags integration`; all helpers present
+**Status:** ✅ Done
 
 ---
 
