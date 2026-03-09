@@ -24,7 +24,7 @@ No API or schema changes. Build tooling only.
 **Type:** Regular
 **Description:** Add `test` as a dependency of the `check` target. Current: `check: build lint` → updated: `check: build lint test`.
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-04 `smoke`
 **Type:** Smoke test
