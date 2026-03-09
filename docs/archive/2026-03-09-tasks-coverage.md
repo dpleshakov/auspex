@@ -1,6 +1,6 @@
 # 2026-03-09-tasks-coverage.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -46,4 +46,4 @@ No API or schema changes. Build tooling only.
 - Update user-facing documentation (README, help, guides) if behaviour visible to the user has changed
 - Verify `technical-reference.md` is up to date — all changes introduced by this feature must be reflected
 - Update `CHANGELOG.md` — only user-visible changes, following the format in `process-changelog.md`
-**Status:** ⬜ Pending
+**Status:** ✅ Done
