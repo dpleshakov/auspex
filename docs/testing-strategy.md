@@ -282,70 +282,119 @@ cover: negative integers where positive are expected, empty strings, deeply nest
 **Idea:**
 Tests that make real HTTP requests to the live ESI API using a valid access token provided
 via environment variable. Unlike fixture-based parser tests, these tests talk to the actual
-ESI and will fail if ESI changes its response format. This is the only test category that
-directly detects real ESI API changes.
+ESI and will fail if ESI changes its response format or drops a field our parser depends on.
+This is the only test category that directly detects real ESI API changes.
 
-These tests serve a dual role: they are both the **detector** of ESI drift and the
-**generator** of golden file fixtures used by parser tests (item 1).
+**What these tests verify:**
+- The ESI call succeeds (no HTTP or parsing error)
+- Structurally valid parser output: non-zero IDs on the first element where real data is
+  guaranteed (blueprints always has items; universe type 34 always has a name and category)
+- Empty slice responses are accepted — no element-level assertions are made on potentially
+  empty endpoints (character jobs, corporation blueprints, corporation jobs)
 
-**How the token is supplied:**
+These tests do **not** compare against saved fixtures or write any files. They are purely
+assertive: call ESI, check the result looks valid, done.
 
-```bash
-ESI_ACCESS_TOKEN=eyJ... go test -tags integration ./internal/esi/...
-```
+**Env vars and skip behaviour:**
 
-Inside the test, a missing token causes a skip rather than a failure:
+| Variable | Required by | Skip behaviour |
+|----------|-------------|----------------|
+| `ESI_ACCESS_TOKEN` | all authed tests | `t.Skip` if empty |
+| `ESI_CHARACTER_ID` | character tests | `t.Skip` if empty |
+| `ESI_CORPORATION_ID` | corporation tests | `t.Skip` if empty |
 
-```go
-token := os.Getenv("ESI_ACCESS_TOKEN")
-if token == "" {
-    t.Skip("ESI_ACCESS_TOKEN not set, skipping integration test")
-}
-```
-
-The token is taken from the running application (already stored in the database) or from
-DevTools. It does not need to be a long-lived token — a fresh token at test time is enough.
-
-**Golden file generation and comparison:**
-
-On first run (or when run with `-update` flag), the test saves the parsed ESI response as a
-JSON fixture in `internal/esi/testdata/`. This is the same file read by fixture-based parser
-tests — so fixtures never need to be created by hand.
-
-On subsequent runs without `-update`, the test compares the live ESI response against the
-saved fixture. Comparison is done on the parsed Go struct, not on raw JSON bytes — so
-insignificant changes (field ordering, new unknown fields) do not cause false positives.
-Only changes to fields we actually parse will fail the test.
-
-When ESI changes something we depend on:
-1. Test fails with a diff showing what changed
-2. Run with `-update` to refresh the fixture
-3. Review the diff in git — this is the explicit decision point
-4. Commit the updated fixture; parser tests automatically reflect the new baseline
+`TestIntegration_GetUniverseType` requires no env vars — it uses hardcoded type ID 34
+(Tritanium), which is a stable EVE item that will always exist.
 
 **What to cover:**
 - `GET /characters/{id}/blueprints` — parses without error, required fields non-zero
-- `GET /characters/{id}/industry/jobs` — same
-- `GET /corporations/{id}/blueprints` — same
-- `GET /corporations/{id}/industry/jobs` — same
-- `GET /universe/types/{type_id}` — same
+- `GET /characters/{id}/industry/jobs` — parses without error
+- `GET /corporations/{id}/blueprints` — parses without error
+- `GET /corporations/{id}/industry/jobs` — parses without error
+- `GET /universe/types/{type_id}` — TypeName non-empty, CategoryID non-zero
+
+**Fixture snapshots (separate tool):**
+JSON snapshots of parsed parser output can be saved using the standalone dump tool
+`tools/esi-dump.go` (build tag `//go:build ignore`). These files are for human inspection
+only — no test reads or writes them. See the "Running Integration Tests" section for
+run commands and details.
 
 **Goal:**
 - Directly solves Problem 1 — the only reliable way to know ESI has changed is to ask ESI
-- Eliminates manual fixture creation for parser tests
-- Makes fixture updates an explicit, reviewable git diff rather than a silent assumption
-
-**Arguments for:**
 - Skips gracefully in CI where no token is available
-- Dual role: generates fixtures AND detects drift — one investment, two benefits
-- Low maintenance: structural comparison, not value-based
 - Complements fixture-based tests: those protect our code day-to-day, these protect against
   ESI drift when run manually
 
 **Implementation order note:**
 Although this test has low urgency for daily CI use, it should be written **before** parser
-tests — because it generates the fixture files that parser tests depend on. Writing parser
-tests first would require creating fixtures by hand, which this test makes unnecessary.
+tests — because it provides the structural confidence that the parser handles the live ESI
+format correctly, and the dump tool can produce fixture files for parser tests to use.
+
+---
+
+## Running Integration Tests
+
+Integration tests live in `internal/esi/integration_test.go` behind the `//go:build integration`
+build tag. They are not included in a normal `go test ./...` run.
+
+### Run commands
+
+```bash
+# Normal run — skips any test whose required env var is absent:
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
+  go test -tags integration ./internal/esi/...
+
+# Universe type test requires no env vars:
+go test -tags integration -run TestIntegration_GetUniverseType ./internal/esi/...
+```
+
+Tests call `t.Skip` (not `t.Fatal`) when a required env var is missing, so running
+without any env vars set will report all authed tests as skipped — not failed.
+
+### Saving parser output snapshots
+
+The standalone tool `tools/esi-dump.go` (build tag `//go:build ignore`, not part of the
+test binary) fetches live ESI data and writes the re-serialized parsed structs to
+`internal/esi/testdata/` as JSON files. These files are for human inspection; no test
+reads or writes them.
+
+```bash
+# Dump all endpoints (requires all three env vars):
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
+  go run tools/esi-dump.go
+
+# Dump only character endpoints:
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 go run tools/esi-dump.go -char
+
+# Dump only corporation endpoints:
+ESI_ACCESS_TOKEN=eyJ... ESI_CORPORATION_ID=67890 go run tools/esi-dump.go -corp
+
+# Dump universe type (no token required):
+go run tools/esi-dump.go -type 34
+
+# Write to a custom directory:
+go run tools/esi-dump.go -out /tmp/esi-snapshots
+```
+
+### Snapshot files
+
+| File | Produced by |
+|------|-------------|
+| `internal/esi/testdata/character_blueprints.json` | `go run tools/esi-dump.go -char` |
+| `internal/esi/testdata/character_jobs.json` | `go run tools/esi-dump.go -char` |
+| `internal/esi/testdata/corporation_blueprints.json` | `go run tools/esi-dump.go -corp` |
+| `internal/esi/testdata/corporation_jobs.json` | `go run tools/esi-dump.go -corp` |
+| `internal/esi/testdata/universe_type_34.json` | `go run tools/esi-dump.go -type 34` |
+
+**Important:** these files contain the **parsed Go struct** re-serialized to JSON — not the
+raw HTTP response bytes from ESI. The raw bytes are consumed inside each `Get*` method and
+are not available at the call site.
+
+### Relationship to parser unit tests
+
+Parser unit tests (`blueprints_test.go`, `jobs_test.go`, `universe_test.go`) use inline JSON
+strings served by `httptest.NewServer`. They do not read files from `internal/esi/testdata/`
+and have no dependency on the integration tests or the dump tool.
 
 ---
 

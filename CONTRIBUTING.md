@@ -42,11 +42,68 @@ GOOS=darwin  GOARCH=arm64 go build -o auspex-darwin-arm64  ./cmd/auspex/
 
 ```bash
 make test
-# or directly:
-go test ./...
 ```
 
-Tests are pure Go unit tests with no external dependencies. They use `httptest` for ESI client tests and mock interfaces for sync and store tests.
+This runs the full test suite with coverage reporting and enforces an 80% coverage threshold:
+
+1. `go test -tags integration ./internal/...` — unit tests + integration tests (skipped if env vars absent)
+2. `go tool cover -func=coverage.out` — per-function coverage table
+3. `go run tools/check-coverage.go 80` — fails if total coverage is below 80%
+
+`internal/store` (100% sqlc-generated) and `cmd/auspex` (wire-up only) are excluded from coverage measurement.
+
+Unit tests use `httptest.NewServer` for ESI client tests and mock interfaces for sync and store tests. They have no external dependencies and run without any environment variables.
+
+### Integration Tests
+
+Integration tests make real HTTP calls to the live ESI API. They are included in `make test` (via `-tags integration`) but skip gracefully when the required environment variables are absent — so `make test` always works without any setup.
+
+To run integration tests with a real token:
+
+```bash
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
+  go test -tags integration ./internal/esi/...
+```
+
+The universe type test requires no token:
+
+```bash
+go test -tags integration -run TestIntegration_GetUniverseType ./internal/esi/...
+```
+
+| Env var | Required by | Behaviour when absent |
+|---------|-------------|----------------------|
+| `ESI_ACCESS_TOKEN` | all authed tests | `t.Skip` |
+| `ESI_CHARACTER_ID` | character tests | `t.Skip` |
+| `ESI_CORPORATION_ID` | corporation tests | `t.Skip` |
+
+### Saving ESI Parser Snapshots
+
+`tools/esi-dump.go` is a standalone utility (not part of any test binary) that fetches live ESI
+data and writes the re-serialized parsed structs to `internal/esi/testdata/` as JSON files.
+Use it to refresh snapshot fixtures for human inspection or as input for parser tests.
+
+```bash
+# Dump all endpoints (requires all three env vars):
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
+  go run tools/esi-dump.go
+
+# Dump only character endpoints:
+ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 go run tools/esi-dump.go -char
+
+# Dump only corporation endpoints:
+ESI_ACCESS_TOKEN=eyJ... ESI_CORPORATION_ID=67890 go run tools/esi-dump.go -corp
+
+# Dump a single universe type (no token required):
+go run tools/esi-dump.go -type 34
+
+# Write to a custom output directory:
+go run tools/esi-dump.go -out /tmp/esi-snapshots
+```
+
+The files contain the **parsed Go struct** serialized to JSON — not the raw HTTP response
+bytes. Parser unit tests use inline JSON with `httptest.NewServer` and are independent of
+these snapshot files.
 
 ## Frontend Dev Server
 
@@ -71,7 +128,7 @@ Open `http://localhost:5173`.
 | `build` | Development build: sqlc → frontend → vet → test → go build. Safe to run before committing. |
 | `lint`  | Static analysis: npm audit, go mod tidy, golangci-lint. Run before pushing. |
 | `check` | Full CI check: lint + build + git diff consistency verification. Requires clean worktree. |
-| `test` | `go test ./...` |
+| `test` | Unit + integration tests (skipped without env vars), coverage report, 80% threshold check. |
 | `clean` | Remove binary and rebuild `web/dist/` with only `.gitkeep` |
 | `clean-all` | `clean` + remove `auspex.db` |
 | `release-notes` | Extract release notes for a version from `CHANGELOG.md` |
