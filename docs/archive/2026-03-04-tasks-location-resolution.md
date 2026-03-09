@@ -1,6 +1,6 @@
 # 2026-03-04-tasks-location-resolution.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -108,4 +108,4 @@ Steps:
 - Update user-facing documentation (README, help, guides) if behaviour visible to the user has changed
 - Verify `technical-reference.md` is up to date — all API and schema changes introduced by this feature must be reflected
 - Update `CHANGELOG.md` — only user-visible changes, following the format in `process-changelog.md`
-**Status:** ⬜ Pending
+**Status:** ✅ Done

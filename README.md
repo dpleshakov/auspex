@@ -11,7 +11,7 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 ## Features
 
 - Multi-character and corporation support via EVE SSO OAuth2; corporations are tracked automatically when a character is added
-- Unified BPO table with ME%, TE%, status, owner, location, and job end date
+- Unified BPO table with ME%, TE%, status, owner, resolved location name, and job end date
 - Row highlighting: red for overdue jobs, yellow for jobs completing today
 - Summary bar: idle BPOs / overdue / completing today / free research slots
 - Per-character slot usage
@@ -23,7 +23,8 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 ## Known Limitations
 
 - Only the first page of ESI results is fetched — large corporation BPO libraries (>1000 items) will be truncated silently.
-- Location IDs are displayed as raw numbers; human-readable station names are not yet implemented.
+- Location names show "Resolving…" until the first sync cycle completes. Player structures in which the character has no docking access will always show "Resolving…".
+- Corporation office locations show as "Corporation Hangar" — the exact station name requires an additional ESI call not yet implemented.
 - Free research slots count is always 0 (requires per-character skill data from ESI, not yet implemented).
 
 See [docs/tech-debt.md](docs/tech-debt.md) for the full list of known deferred decisions.

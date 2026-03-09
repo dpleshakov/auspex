@@ -9,6 +9,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Blueprint table now shows human-readable location names (NPC stations, player structures, and corporation offices); names are resolved automatically after the first sync cycle.
+
 ---
 
 ## [0.1.1] — 2026-03-06
