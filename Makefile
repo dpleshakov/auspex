@@ -26,7 +26,7 @@ check: build lint test
 # Runs Go tests with coverage — prints per-function table and enforces the 80% threshold.
 # internal/store is excluded (100% sqlc-generated); cmd/auspex is excluded (wire-up main only).
 test:
-	go test -coverprofile=coverage.out \
+	go test -tags integration -coverprofile=coverage.out \
 	    ./internal/config/... \
 	    ./internal/db/... \
 	    ./internal/esi/... \
