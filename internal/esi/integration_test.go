@@ -14,8 +14,6 @@ import (
 	"github.com/dpleshakov/auspex/internal/esi"
 )
 
-var dump = flag.Bool("dump", false, "save current parser output as reference snapshot")
-
 func TestMain(m *testing.M) {
 	flag.Parse()
 	os.Exit(m.Run())
@@ -77,9 +75,6 @@ func TestIntegration_GetCharacterBlueprints(t *testing.T) {
 			t.Error("GetCharacterBlueprints: bps[0].TypeID is 0")
 		}
 	}
-	if *dump {
-		saveFixture(t, "character_blueprints", bps)
-	}
 }
 
 func TestIntegration_GetCharacterJobs(t *testing.T) {
@@ -87,12 +82,9 @@ func TestIntegration_GetCharacterJobs(t *testing.T) {
 	characterID := mustEnvID(t, "ESI_CHARACTER_ID")
 
 	client := esi.NewClient(http.DefaultClient)
-	jobs, _, err := client.GetCharacterJobs(context.Background(), characterID, token)
+	_, _, err := client.GetCharacterJobs(context.Background(), characterID, token)
 	if err != nil {
 		t.Fatalf("GetCharacterJobs: %v", err)
-	}
-	if *dump {
-		saveFixture(t, "character_jobs", jobs)
 	}
 }
 
@@ -101,12 +93,9 @@ func TestIntegration_GetCorporationBlueprints(t *testing.T) {
 	corporationID := mustEnvID(t, "ESI_CORPORATION_ID")
 
 	client := esi.NewClient(http.DefaultClient)
-	bps, _, err := client.GetCorporationBlueprints(context.Background(), corporationID, token)
+	_, _, err := client.GetCorporationBlueprints(context.Background(), corporationID, token)
 	if err != nil {
 		t.Fatalf("GetCorporationBlueprints: %v", err)
-	}
-	if *dump {
-		saveFixture(t, "corporation_blueprints", bps)
 	}
 }
 
@@ -115,12 +104,9 @@ func TestIntegration_GetCorporationJobs(t *testing.T) {
 	corporationID := mustEnvID(t, "ESI_CORPORATION_ID")
 
 	client := esi.NewClient(http.DefaultClient)
-	jobs, _, err := client.GetCorporationJobs(context.Background(), corporationID, token)
+	_, _, err := client.GetCorporationJobs(context.Background(), corporationID, token)
 	if err != nil {
 		t.Fatalf("GetCorporationJobs: %v", err)
-	}
-	if *dump {
-		saveFixture(t, "corporation_jobs", jobs)
 	}
 }
 
@@ -137,8 +123,5 @@ func TestIntegration_GetUniverseType(t *testing.T) {
 	}
 	if ut.CategoryID == 0 {
 		t.Error("GetUniverseType: CategoryID is 0")
-	}
-	if *dump {
-		saveFixture(t, "universe_type_34", ut)
 	}
 }
