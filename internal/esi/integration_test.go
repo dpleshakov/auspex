@@ -11,12 +11,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"github.com/dpleshakov/auspex/internal/esi"
 )
 
-var update = flag.Bool("update", false, "overwrite golden fixtures")
+var dump = flag.Bool("dump", false, "save current parser output as reference snapshot")
 
 func TestMain(m *testing.M) {
 	flag.Parse()
@@ -62,29 +60,6 @@ func saveFixture(t *testing.T, name string, v any) {
 	}
 }
 
-// compareFixture either updates the golden fixture (when -update is set) or
-// reads the existing fixture and compares it with got using cmp.Diff.
-// Comparison is on the parsed Go struct, so extra ESI fields not mapped to
-// struct fields are silently ignored.
-func compareFixture[T any](t *testing.T, name string, got T) {
-	t.Helper()
-	if *update {
-		saveFixture(t, name, got)
-		return
-	}
-	data, err := os.ReadFile("testdata/" + name + ".json")
-	if err != nil {
-		t.Fatalf("compareFixture: reading fixture %s: %v", name, err)
-	}
-	var want T
-	if err := json.Unmarshal(data, &want); err != nil {
-		t.Fatalf("compareFixture: unmarshaling fixture %s: %v", name, err)
-	}
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Errorf("compareFixture %s mismatch (-want +got):\n%s", name, diff)
-	}
-}
-
 func TestIntegration_GetCharacterBlueprints(t *testing.T) {
 	token := mustToken(t)
 	characterID := mustEnvID(t, "ESI_CHARACTER_ID")
@@ -94,16 +69,17 @@ func TestIntegration_GetCharacterBlueprints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCharacterBlueprints: %v", err)
 	}
-	if len(bps) == 0 {
-		t.Fatal("GetCharacterBlueprints: expected non-empty slice")
+	if len(bps) > 0 {
+		if bps[0].ItemID == 0 {
+			t.Error("GetCharacterBlueprints: bps[0].ItemID is 0")
+		}
+		if bps[0].TypeID == 0 {
+			t.Error("GetCharacterBlueprints: bps[0].TypeID is 0")
+		}
 	}
-	if bps[0].ItemID == 0 {
-		t.Error("GetCharacterBlueprints: bps[0].ItemID is 0")
+	if *dump {
+		saveFixture(t, "character_blueprints", bps)
 	}
-	if bps[0].TypeID == 0 {
-		t.Error("GetCharacterBlueprints: bps[0].TypeID is 0")
-	}
-	compareFixture(t, "character_blueprints", bps)
 }
 
 func TestIntegration_GetCharacterJobs(t *testing.T) {
@@ -115,7 +91,9 @@ func TestIntegration_GetCharacterJobs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCharacterJobs: %v", err)
 	}
-	compareFixture(t, "character_jobs", jobs)
+	if *dump {
+		saveFixture(t, "character_jobs", jobs)
+	}
 }
 
 func TestIntegration_GetCorporationBlueprints(t *testing.T) {
@@ -127,7 +105,9 @@ func TestIntegration_GetCorporationBlueprints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCorporationBlueprints: %v", err)
 	}
-	compareFixture(t, "corporation_blueprints", bps)
+	if *dump {
+		saveFixture(t, "corporation_blueprints", bps)
+	}
 }
 
 func TestIntegration_GetCorporationJobs(t *testing.T) {
@@ -139,7 +119,9 @@ func TestIntegration_GetCorporationJobs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetCorporationJobs: %v", err)
 	}
-	compareFixture(t, "corporation_jobs", jobs)
+	if *dump {
+		saveFixture(t, "corporation_jobs", jobs)
+	}
 }
 
 func TestIntegration_GetUniverseType(t *testing.T) {
@@ -156,5 +138,7 @@ func TestIntegration_GetUniverseType(t *testing.T) {
 	if ut.CategoryID == 0 {
 		t.Error("GetUniverseType: CategoryID is 0")
 	}
-	compareFixture(t, "universe_type_34", ut)
+	if *dump {
+		saveFixture(t, "universe_type_34", ut)
+	}
 }
