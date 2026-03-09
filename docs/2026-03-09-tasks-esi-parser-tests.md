@@ -115,7 +115,7 @@ Gaps to address, per the testing strategy checklist:
   `X-Pages` pagination. `GetCorporationOffices` currently uses `c.do()` and will silently drop
   results beyond page 1 for corporations with many offices. Consider adding pagination in a
   follow-up task (mirrors TASK-01/TASK-02 pattern).
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

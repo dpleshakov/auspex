@@ -244,6 +244,8 @@ func TestParseXPages(t *testing.T) {
 		{"malformed", "abc", 1},
 		{"zero", "0", 1},
 		{"negative", "-1", 1},
+		{"at cap", "40", 40},
+		{"exceeds cap", "9999", 40},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
