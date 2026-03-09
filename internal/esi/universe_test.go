@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -145,6 +146,64 @@ func TestGetUniverseType_CategoryFetchError(t *testing.T) {
 	_, err := c.GetUniverseType(context.Background(), 34)
 	if err == nil {
 		t.Fatal("expected error when category fetch fails, got nil")
+	}
+}
+
+// --- fixture-based full ESI response test ---
+
+func TestGetUniverseType_FullESIResponse(t *testing.T) {
+	typeData, err := os.ReadFile("testdata/universe_type.json")
+	if err != nil {
+		t.Fatalf("reading universe_type fixture: %v", err)
+	}
+	groupData, err := os.ReadFile("testdata/universe_group.json")
+	if err != nil {
+		t.Fatalf("reading universe_group fixture: %v", err)
+	}
+	categoryData, err := os.ReadFile("testdata/universe_category.json")
+	if err != nil {
+		t.Fatalf("reading universe_category fixture: %v", err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/universe/types/34":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(typeData)
+		case "/universe/groups/18":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(groupData)
+		case "/universe/categories/4":
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(categoryData)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	got, err := c.GetUniverseType(context.Background(), 34)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.TypeID != 34 {
+		t.Errorf("TypeID: got %d, want 34", got.TypeID)
+	}
+	if got.TypeName != "Tritanium" {
+		t.Errorf("TypeName: got %q, want Tritanium", got.TypeName)
+	}
+	if got.GroupID != 18 {
+		t.Errorf("GroupID: got %d, want 18", got.GroupID)
+	}
+	if got.GroupName != "Mineral" {
+		t.Errorf("GroupName: got %q, want Mineral", got.GroupName)
+	}
+	if got.CategoryID != 4 {
+		t.Errorf("CategoryID: got %d, want 4", got.CategoryID)
+	}
+	if got.CategoryName != "Material" {
+		t.Errorf("CategoryName: got %q, want Material", got.CategoryName)
 	}
 }
 

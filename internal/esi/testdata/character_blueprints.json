@@ -1,0 +1,32 @@
+[
+  {
+    "item_id": 1052548709012,
+    "location_flag": "Hangar",
+    "location_id": 60003997,
+    "material_efficiency": 10,
+    "quantity": -1,
+    "runs": -1,
+    "time_efficiency": 20,
+    "type_id": 15511
+  },
+  {
+    "item_id": 1052548712662,
+    "location_flag": "Hangar",
+    "location_id": 60003997,
+    "material_efficiency": 10,
+    "quantity": -1,
+    "runs": -1,
+    "time_efficiency": 20,
+    "type_id": 2477
+  },
+  {
+    "item_id": 1052860196044,
+    "location_flag": "FleetHangar",
+    "location_id": 1052694947788,
+    "material_efficiency": 0,
+    "quantity": 1,
+    "runs": -1,
+    "time_efficiency": 0,
+    "type_id": 819
+  }
+]

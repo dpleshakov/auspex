@@ -212,6 +212,97 @@ func TestGetCorporationJobs_EmptyList(t *testing.T) {
 	}
 }
 
+// --- fixture-based full ESI response tests ---
+
+func TestGetCorporationJobs_FullESIResponse(t *testing.T) {
+	data, err := os.ReadFile("testdata/corporation_jobs.json")
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(data)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCorporationJobs(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Fixture has 2 active jobs (activities 5 + 3); both survive the filter.
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+	j := jobs[0]
+	if j.JobID != 644990911 {
+		t.Errorf("JobID: got %d, want 644990911", j.JobID)
+	}
+	if j.BlueprintID != 1052548714404 {
+		t.Errorf("BlueprintID: got %d, want 1052548714404", j.BlueprintID)
+	}
+	if j.Activity != "copying" {
+		t.Errorf("Activity: got %q, want copying", j.Activity)
+	}
+	if j.Status != "active" {
+		t.Errorf("Status: got %q, want active", j.Status)
+	}
+	wantStart := time.Date(2026, 3, 6, 18, 33, 47, 0, time.UTC)
+	if !j.StartDate.Equal(wantStart) {
+		t.Errorf("StartDate: got %v, want %v", j.StartDate, wantStart)
+	}
+	wantEnd := time.Date(2026, 3, 17, 18, 33, 47, 0, time.UTC)
+	if !j.EndDate.Equal(wantEnd) {
+		t.Errorf("EndDate: got %v, want %v", j.EndDate, wantEnd)
+	}
+	if jobs[1].JobID != 644990823 {
+		t.Errorf("jobs[1].JobID: got %d, want 644990823", jobs[1].JobID)
+	}
+	if jobs[1].Activity != "te_research" {
+		t.Errorf("jobs[1].Activity: got %q, want te_research", jobs[1].Activity)
+	}
+}
+
+func TestGetCharacterJobs_FullESIResponse(t *testing.T) {
+	data, err := os.ReadFile("testdata/character_jobs_mixed.json")
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(data)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCharacterJobs(context.Background(), 42, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Fixture: 1 active me_research + 1 delivered manufacturing (filtered) + 1 ready copying.
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs (manufacturing+delivered filtered), got %d", len(jobs))
+	}
+	if jobs[0].JobID != 700000001 {
+		t.Errorf("jobs[0].JobID: got %d, want 700000001", jobs[0].JobID)
+	}
+	if jobs[0].Activity != "me_research" {
+		t.Errorf("jobs[0].Activity: got %q, want me_research", jobs[0].Activity)
+	}
+	if jobs[0].Status != "active" {
+		t.Errorf("jobs[0].Status: got %q, want active", jobs[0].Status)
+	}
+	if jobs[1].JobID != 700000003 {
+		t.Errorf("jobs[1].JobID: got %d, want 700000003", jobs[1].JobID)
+	}
+	if jobs[1].Activity != "copying" {
+		t.Errorf("jobs[1].Activity: got %q, want copying", jobs[1].Activity)
+	}
+	if jobs[1].Status != "ready" {
+		t.Errorf("jobs[1].Status: got %q, want ready", jobs[1].Status)
+	}
+}
+
 // --- pagination ---
 
 func TestGetCharacterJobs_MultiPage(t *testing.T) {
