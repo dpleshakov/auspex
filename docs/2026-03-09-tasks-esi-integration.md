@@ -95,14 +95,91 @@ Two test functions in `internal/esi/integration_test.go`:
 
 ---
 
+### TASK-04a `esi-integration-rethink`
+**Type:** Regular
+**Description:** Redesign what the integration tests actually verify.
+
+**Problem with the original design:**
+`compareFixture` compared the live ESI response (parsed and re-serialized) against a saved
+golden file. This comparison is not meaningful: live data changes daily, so any diff is a
+false positive. The comparison neither validates parsing logic (that is covered by the unit
+tests in `blueprints_test.go`, `jobs_test.go`, etc., which use `httptest.Server` with
+inline JSON) nor gives useful signal in CI.
+
+**What integration tests should do:**
+- Call the real ESI endpoint with a live token
+- Verify the call succeeded (no error)
+- Verify structurally valid results: non-zero IDs on the first element where real data is
+  guaranteed to exist (blueprints always has items; universe type 34 always has a name)
+- When run with `-dump`: save the current parser output to `testdata/` as a
+  human-readable reference snapshot (useful for debugging and manual inspection)
+- Do nothing else — no file comparison, no exhaustive field checks
+
+**Important constraint — what `saveFixture` saves:**
+`saveFixture` marshals the **parsed Go struct** back to JSON. This is NOT the same as the
+raw HTTP response body from ESI. The raw bytes are consumed inside each `Get*` method and
+are not available at the test level. The files in `testdata/` are therefore reference
+snapshots of what the parser currently returns for real data, not raw ESI payloads.
+
+**Changes to `integration_test.go`:**
+
+1. Rename flag:
+```go
+var dump = flag.Bool("dump", false, "save current parser output as reference snapshot")
+```
+
+2. Rewrite `compareFixture` — drop the generic type parameter, remove all file-read and
+   comparison logic:
+```go
+func compareFixture(t *testing.T, name string, v any) {
+    t.Helper()
+    if *dump {
+        saveFixture(t, name, v)
+    }
+    // Normal run: do nothing. Integration tests verify the call succeeds and
+    // the parser returns structurally valid data — not stable field values.
+}
+```
+
+3. Wrap element-level field assertions in a length guard so empty responses do not fail:
+```go
+if len(bps) > 0 {
+    if bps[0].ItemID == 0 {
+        t.Error("GetCharacterBlueprints: bps[0].ItemID is 0")
+    }
+    if bps[0].TypeID == 0 {
+        t.Error("GetCharacterBlueprints: bps[0].TypeID is 0")
+    }
+}
+```
+   Empty slice is a valid ESI response (character may have no active jobs, corporation may
+   have no blueprints). Assertions at element level only apply where data is guaranteed.
+
+4. Remove the `github.com/google/go-cmp/cmp` import — it is no longer used in
+   `integration_test.go`. The unit tests (`blueprints_test.go`, etc.) use manual field
+   comparisons and do not import `go-cmp` either, so the dependency can be dropped from
+   `go.mod` if it has no other direct users. Verify with `go mod tidy`.
+
+**Definition of done:**
+- Normal run (`go test -tags integration ...`): verifies no ESI error and structurally
+  valid parser output; no file is read or written
+- `-dump` run: saves re-serialized struct JSON to `testdata/` for human inspection; no
+  assertions on field values are run after the save
+- No test fails on a valid empty ESI response (empty slice, zero active jobs)
+- `go-cmp` import removed from `integration_test.go`; `go mod tidy` does not add it back
+**Status:** ⬜ Pending
+
+---
+
 ### TASK-05 `review`
 **Type:** Review
-**Covers:** TASK-01, TASK-02, TASK-03, TASK-04
+**Covers:** TASK-01, TASK-02, TASK-03, TASK-04, TASK-04a
 **Description:**
 - Code: error handling, readability, no dead code
-- Security: `ESI_ACCESS_TOKEN` value is never logged or written into fixture files; fixture JSON contains only parsed struct fields, not raw request details
-- Test correctness: `compareFixture` comparison is on parsed struct, not raw bytes (new ESI fields we don't parse are silently ignored)
-- Verify `go.mod` / `go.sum` are consistent after adding `github.com/google/go-cmp` as direct dependency
+- Security: `ESI_ACCESS_TOKEN` value is never logged or written into fixture files; fixture JSON contains only parsed struct fields (re-serialized from the Go struct), not raw HTTP response details
+- Test correctness: element-level assertions are guarded by `len > 0`; no test fails on a valid empty ESI response
+- Verify `go-cmp` is removed from `go.mod` / `go.sum` after `go mod tidy` (TASK-04a drops the last direct import)
+- Verify `-dump` flag works end-to-end: files appear in `testdata/` when flag is set, nothing is written on a normal run
 - Documentation: verify `technical-reference.md` is unaffected (no API or schema changes in this feature)
 **Status:** ⬜ Pending
 
@@ -114,9 +191,10 @@ Two test functions in `internal/esi/integration_test.go`:
 - No user-visible changes → no CHANGELOG entry
 - Add a "Running Integration Tests" section to `docs/testing-strategy.md` documenting:
   - The three env vars (`ESI_ACCESS_TOKEN`, `ESI_CHARACTER_ID`, `ESI_CORPORATION_ID`) and their skip behaviour
-  - The `-update` flag and its role in refreshing fixture files
-  - The two run commands (normal run + fixture refresh)
-  - Where fixture files live and how they feed into parser tests
+  - The `-dump` flag and its role: saves re-serialized parser output to `testdata/` for human inspection; does not capture raw ESI HTTP response bytes
+  - The two run commands (normal run + dump run)
+  - Where snapshot files live (`internal/esi/testdata/`) and what they contain (parsed struct JSON, not raw ESI JSON)
+  - Note that parser unit tests (`blueprints_test.go`, etc.) use inline JSON with `httptest.Server` and do not depend on these files
 - Verify `technical-reference.md` is unaffected
 **Status:** ⬜ Pending
 
@@ -129,9 +207,9 @@ Two test functions in `internal/esi/integration_test.go`:
 ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
   go test -tags integration ./internal/esi/...
 
-# Refresh golden fixtures:
+# Dump current parser output to testdata/ (human-readable reference snapshots):
 ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
-  go test -tags integration -args -update ./internal/esi/...
+  go test -tags integration -args -dump ./internal/esi/...
 ```
 
 ## Env vars
@@ -142,7 +220,7 @@ ESI_ACCESS_TOKEN=eyJ... ESI_CHARACTER_ID=12345 ESI_CORPORATION_ID=67890 \
 | `ESI_CHARACTER_ID` | character tests | `t.Skip` if empty |
 | `ESI_CORPORATION_ID` | corporation tests | `t.Skip` if empty |
 
-## Fixture files produced
+## Snapshot files (produced only with `-dump`)
 
 | File | Produced by |
 |------|-------------|
