@@ -230,6 +230,89 @@ func TestGetCharacterBlueprints_ZeroMETE(t *testing.T) {
 	}
 }
 
+// --- fixture-based full ESI response tests ---
+
+func TestGetCharacterBlueprints_FullESIResponse(t *testing.T) {
+	data, err := os.ReadFile("testdata/character_blueprints.json")
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(data)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Fixture has 2 BPOs + 1 BPC; only BPOs survive the filter.
+	if len(bps) != 2 {
+		t.Fatalf("expected 2 BPOs (BPC filtered), got %d", len(bps))
+	}
+	bp := bps[0]
+	if bp.ItemID != 1052548709012 {
+		t.Errorf("ItemID: got %d, want 1052548709012", bp.ItemID)
+	}
+	if bp.TypeID != 15511 {
+		t.Errorf("TypeID: got %d, want 15511", bp.TypeID)
+	}
+	if bp.MELevel != 10 {
+		t.Errorf("MELevel: got %d, want 10", bp.MELevel)
+	}
+	if bp.TELevel != 20 {
+		t.Errorf("TELevel: got %d, want 20", bp.TELevel)
+	}
+	if bp.LocationID != 60003997 {
+		t.Errorf("LocationID: got %d, want 60003997", bp.LocationID)
+	}
+	if bp.LocationFlag != "Hangar" {
+		t.Errorf("LocationFlag: got %q, want Hangar", bp.LocationFlag)
+	}
+}
+
+func TestGetCorporationBlueprints_FullESIResponse(t *testing.T) {
+	data, err := os.ReadFile("testdata/corporation_blueprints.json")
+	if err != nil {
+		t.Fatalf("reading fixture: %v", err)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(data)
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCorporationBlueprints(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 2 {
+		t.Fatalf("expected 2 BPOs, got %d", len(bps))
+	}
+	bp := bps[0]
+	if bp.ItemID != 1052525096791 {
+		t.Errorf("ItemID: got %d, want 1052525096791", bp.ItemID)
+	}
+	if bp.TypeID != 2204 {
+		t.Errorf("TypeID: got %d, want 2204", bp.TypeID)
+	}
+	if bp.MELevel != 10 {
+		t.Errorf("MELevel: got %d, want 10", bp.MELevel)
+	}
+	if bp.TELevel != 20 {
+		t.Errorf("TELevel: got %d, want 20", bp.TELevel)
+	}
+	if bp.LocationID != 1052718829566 {
+		t.Errorf("LocationID: got %d, want 1052718829566", bp.LocationID)
+	}
+	if bp.LocationFlag != "CorpSAG3" {
+		t.Errorf("LocationFlag: got %q, want CorpSAG3", bp.LocationFlag)
+	}
+}
+
 // --- parseXPages ---
 
 func TestParseXPages(t *testing.T) {
