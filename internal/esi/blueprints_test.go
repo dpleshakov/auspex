@@ -162,6 +162,74 @@ func TestGetCorporationBlueprints_UsesCorrectURL(t *testing.T) {
 	}
 }
 
+func TestGetCharacterBlueprints_AllBPCsReturnsEmpty(t *testing.T) {
+	payload := `[
+		{"item_id":1,"type_id":100,"location_id":60000004,"material_efficiency":0,"time_efficiency":0,"quantity":5},
+		{"item_id":2,"type_id":200,"location_id":60000004,"material_efficiency":0,"time_efficiency":0,"quantity":10}
+	]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 0 {
+		t.Errorf("expected empty slice (all BPCs filtered), got %d items", len(bps))
+	}
+}
+
+func TestGetCharacterBlueprints_LocationFlagAbsent(t *testing.T) {
+	// location_flag field is omitted — Go should decode it as the zero value "".
+	payload := `[{"item_id":1,"type_id":100,"location_id":60000004,"material_efficiency":10,"time_efficiency":20,"quantity":-1}]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 1 {
+		t.Fatalf("expected 1 blueprint, got %d", len(bps))
+	}
+	if bps[0].LocationFlag != "" {
+		t.Errorf("LocationFlag: got %q, want empty string", bps[0].LocationFlag)
+	}
+}
+
+func TestGetCharacterBlueprints_ZeroMETE(t *testing.T) {
+	// A BPO with ME=0 and TE=0 must survive the BPC filter (quantity=-1) and parse to 0.
+	payload := `[{"item_id":1,"type_id":100,"location_id":60000004,"material_efficiency":0,"time_efficiency":0,"quantity":-1}]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 1 {
+		t.Fatalf("expected 1 BPO, got %d", len(bps))
+	}
+	if bps[0].MELevel != 0 {
+		t.Errorf("MELevel: got %d, want 0", bps[0].MELevel)
+	}
+	if bps[0].TELevel != 0 {
+		t.Errorf("TELevel: got %d, want 0", bps[0].TELevel)
+	}
+}
+
 // --- parseXPages ---
 
 func TestParseXPages(t *testing.T) {

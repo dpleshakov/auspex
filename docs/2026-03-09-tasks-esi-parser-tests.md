@@ -96,7 +96,7 @@ Gaps to address, per the testing strategy checklist:
   offices in this task.
 
 **Definition of done:** all new tests pass + `make test` passes + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
@@ -111,6 +111,10 @@ Gaps to address, per the testing strategy checklist:
   check (`go mod tidy`, `golangci-lint`).
 - Documentation: verify `technical-reference.md` matches reality — update if pagination behaviour
   is documented there; verify `architecture.md` — no module responsibility changes expected.
+- **Follow-up note (from TASK-03):** The ESI `/corporations/{id}/offices/` endpoint supports
+  `X-Pages` pagination. `GetCorporationOffices` currently uses `c.do()` and will silently drop
+  results beyond page 1 for corporations with many offices. Consider adding pagination in a
+  follow-up task (mirrors TASK-01/TASK-02 pattern).
 **Status:** ⬜ Pending
 
 ---

@@ -178,6 +178,40 @@ func TestGetCorporationJobs_UsesCorrectURL(t *testing.T) {
 	}
 }
 
+func TestGetCharacterJobs_EmptyList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCharacterJobs(context.Background(), 42, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(jobs))
+	}
+}
+
+func TestGetCorporationJobs_EmptyList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCorporationJobs(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(jobs))
+	}
+}
+
 // --- pagination ---
 
 func TestGetCharacterJobs_MultiPage(t *testing.T) {
