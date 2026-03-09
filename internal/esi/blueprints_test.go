@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -157,5 +159,157 @@ func TestGetCorporationBlueprints_UsesCorrectURL(t *testing.T) {
 	}
 	if !strings.Contains(gotPath, "/corporations/99999/blueprints") {
 		t.Errorf("unexpected URL path: %q", gotPath)
+	}
+}
+
+// --- parseXPages ---
+
+func TestParseXPages(t *testing.T) {
+	tests := []struct {
+		name string
+		s    string
+		want int
+	}{
+		{"valid integer", "3", 3},
+		{"one", "1", 1},
+		{"absent", "", 1},
+		{"malformed", "abc", 1},
+		{"zero", "0", 1},
+		{"negative", "-1", 1},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseXPages(tc.s); got != tc.want {
+				t.Errorf("parseXPages(%q) = %d, want %d", tc.s, got, tc.want)
+			}
+		})
+	}
+}
+
+// --- pagination ---
+
+func TestGetCharacterBlueprints_MultiPage(t *testing.T) {
+	page1, err := os.ReadFile("testdata/character_blueprints_page1.json")
+	if err != nil {
+		t.Fatalf("reading page1 fixture: %v", err)
+	}
+	page2, err := os.ReadFile("testdata/character_blueprints_page2.json")
+	if err != nil {
+		t.Fatalf("reading page2 fixture: %v", err)
+	}
+
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("X-Pages", "2")
+		if r.URL.Query().Get("page") == "2" {
+			_, _ = w.Write(page2)
+		} else {
+			_, _ = w.Write(page1)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 2 {
+		t.Fatalf("expected 2 BPOs, got %d", len(bps))
+	}
+	if bps[0].ItemID != 1052548709012 {
+		t.Errorf("bps[0].ItemID: got %d, want 1052548709012", bps[0].ItemID)
+	}
+	if bps[1].ItemID != 1052548712662 {
+		t.Errorf("bps[1].ItemID: got %d, want 1052548712662", bps[1].ItemID)
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Errorf("expected 2 HTTP requests (page 1 + page 2), got %d", got)
+	}
+}
+
+func TestGetCharacterBlueprints_XPagesAbsent(t *testing.T) {
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		// No X-Pages header — single-page response.
+		_, _ = w.Write([]byte(`[{"item_id":1,"type_id":100,"location_id":60000004,"material_efficiency":10,"time_efficiency":20,"quantity":-1}]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 1 {
+		t.Errorf("expected 1 BPO, got %d", len(bps))
+	}
+	if got := requestCount.Load(); got != 1 {
+		t.Errorf("expected exactly 1 HTTP request, got %d", got)
+	}
+}
+
+func TestGetCharacterBlueprints_XPagesOne(t *testing.T) {
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("X-Pages", "1")
+		_, _ = w.Write([]byte(`[{"item_id":1,"type_id":100,"location_id":60000004,"material_efficiency":10,"time_efficiency":20,"quantity":-1}]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCharacterBlueprints(context.Background(), 12345, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 1 {
+		t.Errorf("expected 1 BPO, got %d", len(bps))
+	}
+	if got := requestCount.Load(); got != 1 {
+		t.Errorf("expected exactly 1 HTTP request, got %d", got)
+	}
+}
+
+func TestGetCorporationBlueprints_MultiPage(t *testing.T) {
+	page1, err := os.ReadFile("testdata/corporation_blueprints_page1.json")
+	if err != nil {
+		t.Fatalf("reading page1 fixture: %v", err)
+	}
+	page2, err := os.ReadFile("testdata/corporation_blueprints_page2.json")
+	if err != nil {
+		t.Fatalf("reading page2 fixture: %v", err)
+	}
+
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("X-Pages", "2")
+		if r.URL.Query().Get("page") == "2" {
+			_, _ = w.Write(page2)
+		} else {
+			_, _ = w.Write(page1)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	bps, _, err := c.GetCorporationBlueprints(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(bps) != 2 {
+		t.Fatalf("expected 2 BPOs, got %d", len(bps))
+	}
+	if bps[0].ItemID != 1052525096791 {
+		t.Errorf("bps[0].ItemID: got %d, want 1052525096791", bps[0].ItemID)
+	}
+	if bps[1].ItemID != 1052525097804 {
+		t.Errorf("bps[1].ItemID: got %d, want 1052525097804", bps[1].ItemID)
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Errorf("expected 2 HTTP requests (page 1 + page 2), got %d", got)
 	}
 }
