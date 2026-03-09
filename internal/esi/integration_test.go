@@ -4,7 +4,6 @@ package esi_test
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"net/http"
 	"os"
@@ -43,19 +42,6 @@ func mustEnvID(t *testing.T, name string) int64 {
 		t.Skipf("%s is not a valid int64: %v", name, err)
 	}
 	return id
-}
-
-// saveFixture marshals v to indented JSON and writes it to testdata/{name}.json.
-func saveFixture(t *testing.T, name string, v any) {
-	t.Helper()
-	data, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		t.Fatalf("saveFixture: marshaling %s: %v", name, err)
-	}
-	path := "testdata/" + name + ".json"
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("saveFixture: writing %s: %v", path, err)
-	}
 }
 
 func TestIntegration_GetCharacterBlueprints(t *testing.T) {
