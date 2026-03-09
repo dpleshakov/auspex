@@ -64,7 +64,7 @@ Tests to write (in `jobs_test.go`):
 - `TestGetCorporationJobs_MultiPage`: same scenario for corp endpoint.
 
 **Definition of done:** working code + tests + `make test` passes + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
