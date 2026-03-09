@@ -29,7 +29,7 @@ No API or schema changes. Build tooling only.
 ### TASK-04 `smoke`
 **Type:** Smoke test
 **Description:** Run `make test` and confirm: tests pass, per-function coverage table is printed, threshold check passes (current total: 61.3%, threshold: 60%). Finally, temporarily lower the threshold argument below 61 to verify that `make test` exits with a non-zero code, then restore the threshold.
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-05 `review`
 **Type:** Review
@@ -38,7 +38,7 @@ No API or schema changes. Build tooling only.
 - Code: error handling in `check-coverage.go` (missing `total:` line, malformed percentage, `go test` failure), readability, obvious issues
 - Security: no tokens in logs, no sensitive data involved
 - Documentation: verify `technical-reference.md` matches reality — update if not; verify `architecture.md` — update if needed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-06 `docs`
 **Type:** Docs
