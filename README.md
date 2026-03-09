@@ -22,7 +22,6 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 
 ## Known Limitations
 
-- Only the first page of ESI results is fetched — large corporation BPO libraries (>1000 items) will be truncated silently.
 - Location names show "Resolving…" until the first sync cycle completes. Player structures in which the character has no docking access will always show "Resolving…".
 - Corporation office locations show as "Corporation Hangar" — the exact station name requires an additional ESI call not yet implemented.
 - Free research slots count is always 0 (requires per-character skill data from ESI, not yet implemented).
