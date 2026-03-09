@@ -65,6 +65,23 @@ func TestGetCorporationOffices_HTTPError(t *testing.T) {
 	}
 }
 
+func TestGetCorporationOffices_EmptyList(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	offices, err := c.GetCorporationOffices(context.Background(), 123, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(offices) != 0 {
+		t.Errorf("expected empty slice, got %d items", len(offices))
+	}
+}
+
 func TestGetCorporationOffices_UsesCorrectURL(t *testing.T) {
 	var gotPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
