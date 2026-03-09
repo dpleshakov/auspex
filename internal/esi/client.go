@@ -62,15 +62,16 @@ func NewClient(h *http.Client) *httpClient {
 	}
 }
 
-// do executes a GET request to url with the given Bearer token.
+// doWithHeader executes a GET request to url with the given Bearer token.
 // It retries on 429 (honoring Retry-After) and 5xx (exponential backoff),
-// up to maxRetries times. Returns the raw response body and the parsed Expires header.
+// up to maxRetries times. Returns the raw response body, response headers from
+// the successful response, and the parsed Expires header.
 // A 4xx response other than 429 is returned as an error without retrying.
-func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Time, error) {
+func (c *httpClient) doWithHeader(ctx context.Context, url, token string) ([]byte, http.Header, time.Time, error) {
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 		if err != nil {
-			return nil, time.Time{}, fmt.Errorf("building request: %w", err)
+			return nil, nil, time.Time{}, fmt.Errorf("building request: %w", err)
 		}
 		req.Header.Set("Accept", "application/json")
 		if token != "" {
@@ -79,13 +80,13 @@ func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Ti
 
 		resp, err := c.http.Do(req) //nolint:gosec // G704: url is always constructed from a hardcoded base URL within this package, never from user input
 		if err != nil {
-			return nil, time.Time{}, fmt.Errorf("sending request: %w", err)
+			return nil, nil, time.Time{}, fmt.Errorf("sending request: %w", err)
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		if err != nil {
-			return nil, time.Time{}, fmt.Errorf("reading response body: %w", err)
+			return nil, nil, time.Time{}, fmt.Errorf("reading response body: %w", err)
 		}
 
 		cacheUntil := parseExpires(resp.Header.Get("Expires"))
@@ -93,33 +94,40 @@ func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Ti
 		switch {
 		case resp.StatusCode == http.StatusTooManyRequests:
 			if attempt == maxRetries {
-				return nil, cacheUntil, fmt.Errorf("ESI 429 after %d retries", maxRetries)
+				return nil, nil, cacheUntil, fmt.Errorf("ESI 429 after %d retries", maxRetries)
 			}
 			c.sleep(parseRetryAfter(resp.Header.Get("Retry-After")))
 			if ctx.Err() != nil {
-				return nil, time.Time{}, ctx.Err()
+				return nil, nil, time.Time{}, ctx.Err()
 			}
 
 		case resp.StatusCode >= 500:
 			if attempt == maxRetries {
-				return nil, cacheUntil, fmt.Errorf("ESI status %d after %d retries", resp.StatusCode, maxRetries)
+				return nil, nil, cacheUntil, fmt.Errorf("ESI status %d after %d retries", resp.StatusCode, maxRetries)
 			}
 			// Exponential backoff: 1s, 2s, 4s for attempts 0, 1, 2.
 			c.sleep(time.Duration(1<<uint(attempt)) * time.Second)
 			if ctx.Err() != nil {
-				return nil, time.Time{}, ctx.Err()
+				return nil, nil, time.Time{}, ctx.Err()
 			}
 
 		case resp.StatusCode >= 400:
-			return nil, cacheUntil, fmt.Errorf("ESI status %d: %s", resp.StatusCode, body)
+			return nil, nil, cacheUntil, fmt.Errorf("ESI status %d: %s", resp.StatusCode, body)
 
 		default:
-			return body, cacheUntil, nil
+			return body, resp.Header, cacheUntil, nil
 		}
 	}
 
 	// Unreachable: every path in the last iteration returns explicitly.
-	return nil, time.Time{}, fmt.Errorf("ESI request failed after %d retries", maxRetries)
+	return nil, nil, time.Time{}, fmt.Errorf("ESI request failed after %d retries", maxRetries)
+}
+
+// do executes a GET request to url with the given Bearer token.
+// It is a thin wrapper around doWithHeader that discards the response headers.
+func (c *httpClient) do(ctx context.Context, url, token string) ([]byte, time.Time, error) {
+	body, _, cacheUntil, err := c.doWithHeader(ctx, url, token)
+	return body, cacheUntil, err
 }
 
 // parseExpires parses the RFC1123 Expires header returned by ESI.
@@ -187,6 +195,19 @@ func (c *httpClient) doPost(ctx context.Context, url string, body []byte) ([]byt
 	}
 
 	return nil, fmt.Errorf("ESI request failed after %d retries", maxRetries)
+}
+
+// parseXPages parses the X-Pages response header returned by ESI paginated endpoints.
+// Returns 1 when the header is absent, equals "1", or cannot be parsed as a positive integer.
+func parseXPages(s string) int {
+	if s == "" {
+		return 1
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n < 1 {
+		return 1
+	}
+	return n
 }
 
 // parseRetryAfter parses the Retry-After header (integer seconds).

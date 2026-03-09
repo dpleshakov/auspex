@@ -42,7 +42,7 @@ Tests to write (in `blueprints_test.go`):
   (valid int, absent header, malformed string, "1").
 
 **Definition of done:** working code + tests + `make test` passes + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
