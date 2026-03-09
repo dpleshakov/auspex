@@ -18,7 +18,7 @@ No API or schema changes. Build tooling only.
 **Type:** Regular
 **Description:** Update the `test` target in Makefile to: run `go test -coverprofile=coverage.out ./...`, print per-function coverage via `go tool cover -func=coverage.out`, and invoke `go run tools/check-coverage.go 60` to enforce the threshold. Replaces the current bare `go test ./...`. Also add `/coverage.out` to `.gitignore` so the generated file does not dirty the worktree (which would break `make check`'s clean-worktree assertion).
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-03 `make check`
 **Type:** Regular
