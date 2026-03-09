@@ -13,6 +13,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Blueprint table now shows human-readable location names (NPC stations, player structures, and corporation offices); names are resolved automatically after the first sync cycle.
 
+### Fixed
+
+- Blueprint and job libraries larger than 1000 items (one ESI page) are now fully synced; previously only the first page was fetched, silently dropping the remainder.
+
 ---
 
 ## [0.1.1] — 2026-03-06

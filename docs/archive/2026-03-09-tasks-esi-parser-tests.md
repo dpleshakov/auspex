@@ -1,6 +1,6 @@
 ## 2026-03-09-tasks-esi-parser-tests.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -129,4 +129,4 @@ Gaps to address, per the testing strategy checklist:
 - Update `CHANGELOG.md` — only user-visible changes, following `process-changelog.md` format.
   The pagination fix is user-visible: characters/corporations with large blueprint libraries
   (>1000 BPOs) were previously showing incomplete data.
-**Status:** ⬜ Pending
+**Status:** ✅ Done
