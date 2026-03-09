@@ -1,11 +1,22 @@
 [
   {
-    "job_id": 645493269,
-    "blueprint_id": 1052762586651,
-    "installer_id": 2124108383,
     "activity_id": 5,
-    "status": "active",
+    "blueprint_id": 1052762586651,
+    "blueprint_location_id": 60003997,
+    "blueprint_type_id": 15511,
+    "cost": 1234.0,
+    "duration": 2534,
+    "end_date": "2026-03-09T16:18:18Z",
+    "facility_id": 60003997,
+    "installer_id": 2124108383,
+    "job_id": 645493269,
+    "licensed_runs": 300,
+    "location_id": 60003997,
+    "output_location_id": 60003997,
+    "probability": 1.0,
+    "product_type_id": 15511,
+    "runs": 1,
     "start_date": "2026-03-09T15:36:04Z",
-    "end_date": "2026-03-09T16:18:18Z"
+    "status": "active"
   }
 ]
