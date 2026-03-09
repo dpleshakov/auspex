@@ -66,10 +66,11 @@ func (m *mockQuerier) ListCharacters(_ context.Context) ([]store.Character, erro
 
 // mockESI records the token passed to each call and returns canned data.
 type mockESI struct {
-	blueprints      []esi.Blueprint
-	cacheUntil      time.Time
-	tokenSeen       string
-	structTokenSeen string
+	blueprints       []esi.Blueprint
+	cacheUntil       time.Time
+	tokenSeen        string
+	structTokenSeen  string
+	officesTokenSeen string
 }
 
 func (m *mockESI) GetCharacterBlueprints(_ context.Context, _ int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -109,7 +110,8 @@ func (m *mockESI) PostUniverseNames(_ context.Context, _ []int64) ([]esi.Univers
 	return nil, nil
 }
 
-func (m *mockESI) GetCorporationOffices(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
+func (m *mockESI) GetCorporationOffices(_ context.Context, _ int64, token string) ([]esi.CorporationOffice, error) {
+	m.officesTokenSeen = token
 	return nil, nil
 }
 
@@ -362,6 +364,77 @@ func TestClient_UniverseTypePassthrough(t *testing.T) {
 	// No store calls, no token seen (universe is public endpoint).
 	if inner.tokenSeen != "" {
 		t.Errorf("tokenSeen = %q, want empty (universe endpoint requires no token)", inner.tokenSeen)
+	}
+}
+
+// TestClient_CorporationOffices_UsesDelegateToken verifies that GetCorporationOffices
+// resolves the delegate character's token and forwards it to the inner ESI client.
+func TestClient_CorporationOffices_UsesDelegateToken(t *testing.T) {
+	srv := newTokenServer(t, "should-not-be-used", "")
+
+	q := &mockQuerier{
+		characters: map[int64]store.Character{
+			99: {
+				ID:           99,
+				Name:         "Director",
+				AccessToken:  "offices-delegate-token",
+				RefreshToken: "offices-delegate-refresh",
+				TokenExpiry:  time.Now().Add(2 * time.Hour), // fresh — no refresh needed
+			},
+		},
+		corporations: map[int64]store.Corporation{
+			77: {ID: 77, Name: "Test Corp", DelegateID: 99},
+		},
+	}
+
+	inner := &mockESI{}
+	client := auth.NewClient(inner, q, newConf(srv.URL), srv.Client())
+
+	_, err := client.GetCorporationOffices(context.Background(), 77, "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if inner.officesTokenSeen != "offices-delegate-token" {
+		t.Errorf("inner ESI received offices token %q, want %q", inner.officesTokenSeen, "offices-delegate-token")
+	}
+	if len(q.upsertCalls) != 0 {
+		t.Errorf("UpsertCharacter called %d times, want 0 (token was fresh)", len(q.upsertCalls))
+	}
+}
+
+// TestClient_GetUniverseSystem_Passthrough verifies that GetUniverseSystem
+// is forwarded directly to the inner client without token injection.
+func TestClient_GetUniverseSystem_Passthrough(t *testing.T) {
+	srv := newTokenServer(t, "should-not-be-used", "") // must not be called
+
+	q := &mockQuerier{}
+	inner := &mockESI{}
+	client := auth.NewClient(inner, q, newConf(srv.URL), srv.Client())
+
+	_, err := client.GetUniverseSystem(context.Background(), 30000142)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if inner.tokenSeen != "" {
+		t.Errorf("tokenSeen = %q, want empty (public endpoint requires no token)", inner.tokenSeen)
+	}
+}
+
+// TestClient_PostUniverseNames_Passthrough verifies that PostUniverseNames
+// is forwarded directly to the inner client without token injection.
+func TestClient_PostUniverseNames_Passthrough(t *testing.T) {
+	srv := newTokenServer(t, "should-not-be-used", "") // must not be called
+
+	q := &mockQuerier{}
+	inner := &mockESI{}
+	client := auth.NewClient(inner, q, newConf(srv.URL), srv.Client())
+
+	_, err := client.PostUniverseNames(context.Background(), []int64{60003760})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if inner.tokenSeen != "" {
+		t.Errorf("tokenSeen = %q, want empty (public endpoint requires no token)", inner.tokenSeen)
 	}
 }
 

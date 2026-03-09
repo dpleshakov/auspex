@@ -343,3 +343,101 @@ func TestDeleteCharacter_InvalidID(t *testing.T) {
 		t.Errorf("expected 400, got %d", rr.Code)
 	}
 }
+
+func TestDeleteCharacter_GetCharacterError(t *testing.T) {
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{}, errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCharacter_DeleteBlueprintsError(t *testing.T) {
+	mock := &mockQuerier{
+		// CorporationID=0 → skip corp logic, go straight to character cascade.
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: 42, CorporationID: 0}, nil
+		},
+		DeleteBlueprintsByOwnerFn: func(_ context.Context, _ store.DeleteBlueprintsByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCharacter_DeleteJobsError(t *testing.T) {
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: 42, CorporationID: 0}, nil
+		},
+		DeleteJobsByOwnerFn: func(_ context.Context, _ store.DeleteJobsByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCharacter_DeleteSyncStateError(t *testing.T) {
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: 42, CorporationID: 0}, nil
+		},
+		DeleteSyncStateByOwnerFn: func(_ context.Context, _ store.DeleteSyncStateByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCharacter_DeleteCharacterError(t *testing.T) {
+	mock := &mockQuerier{
+		GetCharacterFn: func(_ context.Context, _ int64) (store.Character, error) {
+			return store.Character{ID: 42, CorporationID: 0}, nil
+		},
+		DeleteCharacterFn: func(_ context.Context, _ int64) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/characters/42", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
