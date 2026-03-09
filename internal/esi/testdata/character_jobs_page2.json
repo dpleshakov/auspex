@@ -1,0 +1,11 @@
+[
+  {
+    "job_id": 645490001,
+    "blueprint_id": 1052762580226,
+    "installer_id": 2124108383,
+    "activity_id": 4,
+    "status": "active",
+    "start_date": "2026-03-08T12:00:00Z",
+    "end_date": "2026-03-20T12:00:00Z"
+  }
+]

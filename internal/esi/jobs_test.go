@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -173,5 +175,111 @@ func TestGetCorporationJobs_UsesCorrectURL(t *testing.T) {
 	}
 	if !strings.Contains(gotPath, "/corporations/99999/industry/jobs") {
 		t.Errorf("unexpected URL path: %q", gotPath)
+	}
+}
+
+// --- pagination ---
+
+func TestGetCharacterJobs_MultiPage(t *testing.T) {
+	page1, err := os.ReadFile("testdata/character_jobs_page1.json")
+	if err != nil {
+		t.Fatalf("reading page1 fixture: %v", err)
+	}
+	page2, err := os.ReadFile("testdata/character_jobs_page2.json")
+	if err != nil {
+		t.Fatalf("reading page2 fixture: %v", err)
+	}
+
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("X-Pages", "2")
+		if r.URL.Query().Get("page") == "2" {
+			_, _ = w.Write(page2)
+		} else {
+			_, _ = w.Write(page1)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCharacterJobs(context.Background(), 42, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+	if jobs[0].JobID != 645493269 {
+		t.Errorf("jobs[0].JobID: got %d, want 645493269", jobs[0].JobID)
+	}
+	if jobs[1].JobID != 645490001 {
+		t.Errorf("jobs[1].JobID: got %d, want 645490001", jobs[1].JobID)
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Errorf("expected 2 HTTP requests (page 1 + page 2), got %d", got)
+	}
+}
+
+func TestGetCharacterJobs_XPagesAbsent(t *testing.T) {
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		// No X-Pages header — single-page response.
+		_, _ = w.Write([]byte(`[{"job_id":1,"blueprint_id":100,"installer_id":42,"activity_id":5,"status":"active","start_date":"2026-03-09T15:36:04Z","end_date":"2026-03-09T16:18:18Z"}]`))
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCharacterJobs(context.Background(), 42, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(jobs) != 1 {
+		t.Errorf("expected 1 job, got %d", len(jobs))
+	}
+	if got := requestCount.Load(); got != 1 {
+		t.Errorf("expected exactly 1 HTTP request, got %d", got)
+	}
+}
+
+func TestGetCorporationJobs_MultiPage(t *testing.T) {
+	page1, err := os.ReadFile("testdata/corporation_jobs_page1.json")
+	if err != nil {
+		t.Fatalf("reading page1 fixture: %v", err)
+	}
+	page2, err := os.ReadFile("testdata/corporation_jobs_page2.json")
+	if err != nil {
+		t.Fatalf("reading page2 fixture: %v", err)
+	}
+
+	var requestCount atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("X-Pages", "2")
+		if r.URL.Query().Get("page") == "2" {
+			_, _ = w.Write(page2)
+		} else {
+			_, _ = w.Write(page1)
+		}
+	}))
+	defer srv.Close()
+
+	c := newTestClient(srv)
+	jobs, _, err := c.GetCorporationJobs(context.Background(), 99999, "tok")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs, got %d", len(jobs))
+	}
+	if jobs[0].JobID != 644990911 {
+		t.Errorf("jobs[0].JobID: got %d, want 644990911", jobs[0].JobID)
+	}
+	if jobs[1].JobID != 644990823 {
+		t.Errorf("jobs[1].JobID: got %d, want 644990823", jobs[1].JobID)
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Errorf("expected 2 HTTP requests (page 1 + page 2), got %d", got)
 	}
 }
