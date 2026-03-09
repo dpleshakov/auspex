@@ -25,6 +25,12 @@ const (
 	// maxRetryAfterDelay caps the Retry-After sleep to prevent the client from
 	// blocking indefinitely on a misbehaving or adversarial ESI response.
 	maxRetryAfterDelay = 60 * time.Second
+
+	// maxXPages caps the X-Pages value accepted from ESI. ESI endpoints return
+	// 1000 items per page; 40 pages = 40,000 items, far beyond any realistic
+	// blueprint or job count. The cap guards against a misbehaving server
+	// causing runaway request loops.
+	maxXPages = 40
 )
 
 // Client is the interface used by the sync and auth packages.
@@ -199,6 +205,8 @@ func (c *httpClient) doPost(ctx context.Context, url string, body []byte) ([]byt
 
 // parseXPages parses the X-Pages response header returned by ESI paginated endpoints.
 // Returns 1 when the header is absent, equals "1", or cannot be parsed as a positive integer.
+// The result is capped at maxXPages to guard against a misbehaving server causing
+// runaway request loops.
 func parseXPages(s string) int {
 	if s == "" {
 		return 1
@@ -206,6 +214,9 @@ func parseXPages(s string) int {
 	n, err := strconv.Atoi(s)
 	if err != nil || n < 1 {
 		return 1
+	}
+	if n > maxXPages {
+		return maxXPages
 	}
 	return n
 }
