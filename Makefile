@@ -23,11 +23,18 @@ check: build lint test
 
 # ── Test ──────────────────────────────────────────────────────────────────────
 
-# Runs Go tests with coverage — prints per-function table and enforces the 60% threshold.
+# Runs Go tests with coverage — prints per-function table and enforces the 80% threshold.
+# internal/store is excluded (100% sqlc-generated); cmd/auspex is excluded (wire-up main only).
 test:
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out \
+	    ./internal/config/... \
+	    ./internal/db/... \
+	    ./internal/esi/... \
+	    ./internal/auth/... \
+	    ./internal/sync/... \
+	    ./internal/api/...
 	go tool cover -func=coverage.out
-	go run tools/check-coverage.go 60
+	go run tools/check-coverage.go 80
 
 # ── Release ───────────────────────────────────────────────────────────────────
 

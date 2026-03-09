@@ -196,6 +196,74 @@ func TestDeleteCorporation_InvalidID(t *testing.T) {
 	}
 }
 
+func TestDeleteCorporation_DeleteBlueprintsError(t *testing.T) {
+	mock := &mockQuerier{
+		DeleteBlueprintsByOwnerFn: func(_ context.Context, _ store.DeleteBlueprintsByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCorporation_DeleteJobsError(t *testing.T) {
+	mock := &mockQuerier{
+		DeleteJobsByOwnerFn: func(_ context.Context, _ store.DeleteJobsByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCorporation_DeleteSyncStateError(t *testing.T) {
+	mock := &mockQuerier{
+		DeleteSyncStateByOwnerFn: func(_ context.Context, _ store.DeleteSyncStateByOwnerParams) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
+func TestDeleteCorporation_DeleteCorporationError(t *testing.T) {
+	mock := &mockQuerier{
+		DeleteCorporationFn: func(_ context.Context, _ int64) error {
+			return errors.New("db error")
+		},
+	}
+	mux := NewRouter(mock, nil, nil, testFS())
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/corporations/100", http.NoBody)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", rr.Code)
+	}
+}
+
 func TestPatchDelegate_OK(t *testing.T) {
 	var updated store.UpdateCorporationDelegateParams
 	mock := &mockQuerier{
