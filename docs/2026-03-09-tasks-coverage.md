@@ -12,11 +12,11 @@ No API or schema changes. Build tooling only.
 **Type:** Regular
 **Description:** Create `tools/check-coverage.go` — a Go script tagged `//go:build ignore` that runs `go test -coverprofile=coverage.out ./...`, parses the total coverage percentage from `go tool cover -func` output, and exits with a non-zero code if the total is below the threshold. Threshold is passed as a CLI argument; default is 70. The script must work on Windows, macOS, and Linux without external dependencies.
 **Definition of done:** working code + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ### TASK-02 `make test`
 **Type:** Regular
-**Description:** Update the `test` target in Makefile to: run `go test -coverprofile=coverage.out ./...`, print per-function coverage via `go tool cover -func=coverage.out`, and invoke `go run tools/check-coverage.go 70` to enforce the threshold. Replaces the current bare `go test ./...`. Also add `/coverage.out` to `.gitignore` so the generated file does not dirty the worktree (which would break `make check`'s clean-worktree assertion).
+**Description:** Update the `test` target in Makefile to: run `go test -coverprofile=coverage.out ./...`, print per-function coverage via `go tool cover -func=coverage.out`, and invoke `go run tools/check-coverage.go 60` to enforce the threshold. Replaces the current bare `go test ./...`. Also add `/coverage.out` to `.gitignore` so the generated file does not dirty the worktree (which would break `make check`'s clean-worktree assertion).
 **Definition of done:** working code + committed
 **Status:** ⬜ Pending
 
@@ -28,7 +28,7 @@ No API or schema changes. Build tooling only.
 
 ### TASK-04 `smoke`
 **Type:** Smoke test
-**Description:** First, determine the current total coverage: run `go test -coverprofile=coverage.out ./... && go tool cover -func=coverage.out | tail -1` and note the percentage. Confirm that the 70% threshold in TASK-02 is achievable; if actual coverage is below 70%, go back to TASK-02 and lower the threshold argument accordingly before committing. Then run `make test` and confirm: tests pass, per-function coverage table is printed, threshold check passes. Finally, temporarily lower the threshold argument below the actual coverage to verify that `make test` exits with a non-zero code, then restore the threshold.
+**Description:** Run `make test` and confirm: tests pass, per-function coverage table is printed, threshold check passes (current total: 61.3%, threshold: 60%). Finally, temporarily lower the threshold argument below 61 to verify that `make test` exits with a non-zero code, then restore the threshold.
 **Status:** ⬜ Pending
 
 ### TASK-05 `review`
