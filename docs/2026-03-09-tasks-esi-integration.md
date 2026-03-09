@@ -51,6 +51,7 @@ Two test functions in `internal/esi/integration_test.go`:
   - Calls `compareFixture(t, "character_jobs", jobs)`
 
 **Definition of done:** both tests compile and skip when env vars are absent
+**Status:** ✅ Done
 
 ---
 
@@ -73,6 +74,7 @@ Two test functions in `internal/esi/integration_test.go`:
   - Calls `compareFixture(t, "corporation_jobs", jobs)`
 
 **Definition of done:** both tests compile and skip when env vars are absent
+**Status:** ✅ Done
 
 ---
 
@@ -89,6 +91,7 @@ Two test functions in `internal/esi/integration_test.go`:
   - Calls `compareFixture(t, "universe_type_34", ut)`
 
 **Definition of done:** test compiles and runs without any env vars set
+**Status:** ✅ Done
 
 ---
 
