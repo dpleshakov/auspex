@@ -179,7 +179,7 @@ with a non-zero code on any error (no `t.Skip` semantics — all env vars are re
 - Verify `tools/esi-dump.go` works end-to-end: `go run tools/esi-dump.go` writes files to `testdata/`; normal test run writes nothing
 - Verify `saveFixture` in `integration_test.go` is not called by any test function (dead helper — acceptable, or remove)
 - Documentation: verify `technical-reference.md` is unaffected (no API or schema changes in this feature)
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
