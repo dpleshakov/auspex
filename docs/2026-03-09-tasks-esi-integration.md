@@ -167,7 +167,8 @@ if len(bps) > 0 {
   assertions on field values are run after the save
 - No test fails on a valid empty ESI response (empty slice, zero active jobs)
 - `go-cmp` import removed from `integration_test.go`; `go mod tidy` does not add it back
-**Status:** ⬜ Pending
+- `compareFixture` removed; dump logic inlined as `if *dump { saveFixture(...) }` in each test
+**Status:** ✅ Done
 
 ---
 
