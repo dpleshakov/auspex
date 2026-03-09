@@ -371,4 +371,4 @@ Code is organized into four top-level directories:
 | `cmd/` | Binary entry point and embedded frontend. `cmd/auspex/web/` lives here so `//go:embed` can reference `web/dist` without crossing directory boundaries. |
 | `internal/` | All application packages: `config`, `db`, `store`, `esi`, `auth`, `sync`, `api`. Each package has a single, well-defined responsibility (see [Modules and Responsibilities](#modules-and-responsibilities) above). |
 | `docs/` | Project documentation: architecture, technical reference, project brief, tech debt backlog. |
-| `tools/` | Go helper scripts for cross-platform build tasks (`rm.go`, `touch.go`). Tagged `//go:build ignore` — not part of normal builds, invoked via `go run`. |
+| `tools/` | Go helper scripts tagged `//go:build ignore`, invoked via `go run`. Includes `rm.go`, `touch.go` (cross-platform file ops), `check-coverage.go` (coverage threshold enforcement), `release-notes.go` (CHANGELOG extraction), `gen-versioninfo.go` (Windows version resource generation). |
