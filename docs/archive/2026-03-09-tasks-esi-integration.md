@@ -1,6 +1,6 @@
 # 2026-03-09-tasks-esi-integration.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Context
 
@@ -194,7 +194,7 @@ with a non-zero code on any error (no `t.Skip` semantics — all env vars are re
   - Where snapshot files live (`internal/esi/testdata/`) and what they contain (parsed struct JSON, not raw ESI JSON)
   - Note that parser unit tests (`blueprints_test.go`, etc.) use inline JSON with `httptest.Server` and do not depend on these files
 - Verify `technical-reference.md` is unaffected
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
