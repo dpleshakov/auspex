@@ -512,3 +512,22 @@ After a successful callback, Auspex:
 5. If the corporation is a player corporation (ID outside 1000000–2000000), inserts it into the `corporations` table with this character as delegate (`INSERT OR IGNORE` — if already tracked, the existing delegate is preserved)
 6. Triggers an immediate background sync for the new character
 7. Redirects to `/` (the React dashboard)
+
+---
+
+## ESI Endpoints Used
+
+| Endpoint | Auth | Scope | Purpose |
+|----------|------|-------|---------|
+| `GET /characters/{id}/blueprints` | Bearer | `esi-blueprints.read_character_blueprints.v1` | Character BPO library |
+| `GET /corporations/{id}/blueprints` | Bearer | `esi-blueprints.read_corporation_blueprints.v1` | Corporation BPO library |
+| `GET /characters/{id}/industry/jobs/` | Bearer | `esi-industry.read_character_jobs.v1` | Character research jobs |
+| `GET /corporations/{id}/industry/jobs/` | Bearer | `esi-industry.read_corporation_jobs.v1` | Corporation research jobs |
+| `GET /corporations/{id}/assets/?page=N` | Bearer | `esi-assets.read_corporation_assets.v1` | Corp assets — used to resolve CorpSAG blueprint locations to real station/structure IDs via OfficeFolder entries |
+| `GET /universe/types/{id}/` | None | — | Item type name and group |
+| `GET /universe/groups/{id}/` | None | — | Group name and category |
+| `GET /universe/categories/{id}/` | None | — | Category name |
+| `GET /universe/stations/{id}/` | None | — | NPC station name (station IDs 60 000 000–64 000 000) |
+| `GET /universe/structures/{id}/` | Bearer | `esi-universe.read_structures.v1` | Player structure name (IDs ≥ 1 000 000 000 000) |
+| `GET /universe/systems/{id}/` | None | — | Solar system name |
+| `POST /universe/names/` | None | — | Batch ID-to-name resolution |

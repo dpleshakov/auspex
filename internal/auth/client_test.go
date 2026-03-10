@@ -110,9 +110,17 @@ func (m *mockESI) PostUniverseNames(_ context.Context, _ []int64) ([]esi.Univers
 	return nil, nil
 }
 
+func (m *mockESI) GetCorporationAssets(_ context.Context, _ int64, _ string, _ int) ([]esi.CorpAsset, int, time.Time, error) {
+	return nil, 0, time.Time{}, nil
+}
+
 func (m *mockESI) GetCorporationOffices(_ context.Context, _ int64, token string) ([]esi.CorporationOffice, error) {
 	m.officesTokenSeen = token
 	return nil, nil
+}
+
+func (m *mockESI) GetStation(_ context.Context, _ int64) (string, error) {
+	return "", nil
 }
 
 // ---------------------------------------------------------------------------

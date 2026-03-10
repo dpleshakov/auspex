@@ -71,7 +71,7 @@ in the interface for now (removed in TASK-05). Add unit tests for both methods.
 
 Update `technical-reference.md` to reflect new ESI endpoints.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
