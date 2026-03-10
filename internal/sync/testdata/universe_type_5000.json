@@ -1,0 +1,15 @@
+{
+  "capacity": 0.0,
+  "description": "Blueprint used in the manufacturing of Tritanium.",
+  "group_id": 260,
+  "icon_id": 0,
+  "market_group_id": 1052,
+  "mass": 0.0,
+  "name": "Tritanium Blueprint",
+  "packaged_volume": 0.01,
+  "portion_size": 1,
+  "published": true,
+  "radius": 1.0,
+  "type_id": 5000,
+  "volume": 0.01
+}
