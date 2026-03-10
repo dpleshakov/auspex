@@ -1,6 +1,6 @@
 ## 2026-03-10-tasks-api-contract-tests.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -115,4 +115,4 @@ using the helpers from TASK-01.
 - Update user-facing documentation (README) only if any externally visible behaviour changed — no changes expected for a test-only feature
 - Verify `technical-reference.md` is up to date — confirm all JSON response shapes for the 10 endpoints above are documented; add or correct any missing fields found during TASK-02 and TASK-03
 - Update `CHANGELOG.md` following the format in `process-changelog.md` — add one entry under the current release section noting that API contract tests were added
-**Status:** ⬜ Pending
+**Status:** ✅ Done
