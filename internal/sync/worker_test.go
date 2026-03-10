@@ -375,6 +375,7 @@ func TestCorporation_CacheExpired_Synced(t *testing.T) {
 	w.runCycle(context.Background(), false)
 
 	want := []string{
+		fmt.Sprintf("%s:%d:%s", ownerTypeCorporation, corpID, endpointCorpAssets),
 		fmt.Sprintf("%s:%d:%s", ownerTypeCorporation, corpID, endpointBlueprints),
 		fmt.Sprintf("%s:%d:%s", ownerTypeCorporation, corpID, endpointJobs),
 	}
