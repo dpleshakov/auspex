@@ -78,7 +78,7 @@ func TestContract_GetBlueprints_WithJob(t *testing.T) {
 		OwnerType:   "character",
 		OwnerID:     3002,
 		InstallerID: 3002,
-		Activity:    "manufacturing",
+		Activity:    "me_research",
 		Status:      "active",
 		EndDate:     time.Now().Add(time.Hour),
 	})
