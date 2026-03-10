@@ -86,7 +86,7 @@ Each test seeds rows, starts a fake ESI server serving the relevant fixtures, ca
 
 **Definition of done:** all new tests pass, `go test ./internal/sync/...` green.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
