@@ -15,7 +15,7 @@ func TestContract_GetCorporations_EmptyDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/corporations: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -39,7 +39,7 @@ func TestContract_GetCorporations_OneCorporation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/corporations: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -74,7 +74,7 @@ func TestContract_PostCorporations_ValidRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /api/corporations: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handler returns 201 with no body on success.
 	if resp.StatusCode != http.StatusCreated {
@@ -106,7 +106,7 @@ func TestContract_PatchCorporationDelegate_ValidRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PATCH /api/corporations/66666/delegate: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handler returns 204 No Content on success.
 	if resp.StatusCode != http.StatusNoContent {
