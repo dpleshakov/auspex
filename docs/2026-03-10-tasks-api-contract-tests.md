@@ -94,7 +94,7 @@ using the helpers from TASK-01.
 - → 202 Accepted, empty body
 
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

@@ -161,11 +161,11 @@ func seedBlueprint(t *testing.T, sqlDB *sql.DB, b BlueprintSeed) {
 type JobSeed struct {
 	ID          int64
 	BlueprintID int64
-	OwnerType   string    // "character" | "corporation"; defaults to "character"
+	OwnerType   string // "character" | "corporation"; defaults to "character"
 	OwnerID     int64
 	InstallerID int64
-	Activity    string    // defaults to "me_research"
-	Status      string    // defaults to "active"
+	Activity    string // defaults to "me_research"
+	Status      string // defaults to "active"
 	StartDate   time.Time
 	EndDate     time.Time
 }

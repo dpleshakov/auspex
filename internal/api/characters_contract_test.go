@@ -15,7 +15,7 @@ func TestContract_GetCharacters_EmptyDB(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/characters: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -38,7 +38,7 @@ func TestContract_GetCharacters_NoCorpNoSyncError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/characters: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -79,7 +79,7 @@ func TestContract_GetCharacters_WithCorpAndSyncError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /api/characters: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
