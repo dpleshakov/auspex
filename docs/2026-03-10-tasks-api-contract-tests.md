@@ -66,7 +66,7 @@ using the helpers from TASK-01.
 For each test: decode response into `map[string]any`, assert required keys exist with correct Go types. Do not assert on specific values — only shape and nullability.
 
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

@@ -197,6 +197,36 @@ func seedJob(t *testing.T, sqlDB *sql.DB, j JobSeed) {
 	}
 }
 
+// --- Assertion helpers ---
+
+// assertField verifies key exists in m and its value has type T.
+// In JSON decoded to map[string]any, numbers are float64, booleans are bool, strings are string.
+func assertField[T any](t *testing.T, m map[string]any, key string) {
+	t.Helper()
+	v, ok := m[key]
+	if !ok {
+		t.Errorf("key %q missing from response", key)
+		return
+	}
+	if _, ok := v.(T); !ok {
+		var zero T
+		t.Errorf("key %q: want %T, got %T (%v)", key, zero, v, v)
+	}
+}
+
+// assertNull verifies key exists in m and its value is JSON null (nil in Go).
+func assertNull(t *testing.T, m map[string]any, key string) {
+	t.Helper()
+	v, ok := m[key]
+	if !ok {
+		t.Errorf("key %q missing from response", key)
+		return
+	}
+	if v != nil {
+		t.Errorf("key %q: want null, got %v (%T)", key, v, v)
+	}
+}
+
 // --- Smoke test ---
 
 func TestContractDB_MigrationsApply(t *testing.T) {
