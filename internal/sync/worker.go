@@ -126,7 +126,7 @@ func (w *Worker) runCycle(ctx context.Context, force bool) {
 	}
 
 	for _, corp := range corps {
-		for _, endpoint := range []string{endpointBlueprints, endpointJobs} {
+		for _, endpoint := range []string{endpointCorpAssets, endpointBlueprints, endpointJobs} {
 			if ctx.Err() != nil {
 				return
 			}
@@ -162,6 +162,12 @@ func (w *Worker) syncSubject(ctx context.Context, ownerType string, ownerID int6
 	var err error
 
 	switch endpoint {
+	case endpointCorpAssets:
+		if ownerType != ownerTypeCorporation {
+			log.Printf("sync: corp_assets endpoint requires corporation owner, got %s %d", ownerType, ownerID)
+			return
+		}
+		cacheUntil, err = w.syncCorpAssets(ctx, ownerID)
 	case endpointBlueprints:
 		cacheUntil, err = w.syncBlueprints(ctx, ownerType, ownerID)
 		if err == nil {
@@ -274,6 +280,54 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 		}
 		if len(officeIDs) > 0 {
 			w.resolveCorpOfficeLocations(ctx, ownerID, officeIDs, now)
+		}
+	}
+
+	return cacheUntil, nil
+}
+
+// syncCorpAssets fetches all pages of corporation assets from ESI, retains only
+// OfficeFolder entries, and stores them in corp_assets after pruning stale rows.
+// Returns the ESI cache expiry from page 1.
+func (w *Worker) syncCorpAssets(ctx context.Context, corpID int64) (time.Time, error) {
+	assets, totalPages, cacheUntil, err := w.esi.GetCorporationAssets(ctx, corpID, "", 1)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("fetching corp assets page 1: %w", err)
+	}
+
+	var officeFolders []esi.CorpAsset
+	for _, a := range assets {
+		if a.LocationFlag == "OfficeFolder" {
+			officeFolders = append(officeFolders, a)
+		}
+	}
+
+	for page := 2; page <= totalPages; page++ {
+		if ctx.Err() != nil {
+			return cacheUntil, ctx.Err()
+		}
+		pageAssets, _, _, err := w.esi.GetCorporationAssets(ctx, corpID, "", page)
+		if err != nil {
+			return cacheUntil, fmt.Errorf("fetching corp assets page %d: %w", page, err)
+		}
+		for _, a := range pageAssets {
+			if a.LocationFlag == "OfficeFolder" {
+				officeFolders = append(officeFolders, a)
+			}
+		}
+	}
+
+	if err := w.store.DeleteCorpAssetsByOwner(ctx, corpID); err != nil {
+		return cacheUntil, fmt.Errorf("deleting stale corp assets: %w", err)
+	}
+	for _, a := range officeFolders {
+		if err := w.store.UpsertCorpAsset(ctx, store.UpsertCorpAssetParams{
+			ItemID:       a.ItemID,
+			OwnerID:      corpID,
+			LocationID:   a.LocationID,
+			LocationType: a.LocationType,
+		}); err != nil {
+			log.Printf("sync: corp %d: upserting corp asset %d: %v", corpID, a.ItemID, err)
 		}
 	}
 

@@ -158,7 +158,7 @@ func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 		"/latest/universe/types/5000":              "universe_type_5000.json",
 		"/latest/universe/groups/260":              "universe_group_260.json",
 		"/latest/universe/categories/26":           "universe_category_26.json",
-		"/latest/corporations/99000001/assets":     "corporation_assets_officefolders.json",
+		"/latest/corporations/99000001/assets/":    "corporation_assets_officefolders.json",
 		"/latest/universe/stations/60015146":       "universe_station_60015146.json",
 	})
 	w := newIntegrationWorker(t, sqlDB, srv.URL)
@@ -188,6 +188,48 @@ func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 	}
 	if locName != wantName {
 		t.Errorf("eve_locations name: got %q, want %q", locName, wantName)
+	}
+}
+
+// TestSyncIntegration_CorpAssetsSync_StoresOfficeFolders verifies that after a
+// corp_assets sync, the corp_assets table contains the OfficeFolder entry from
+// the fixture and sync_state.cache_until is in the future.
+func TestSyncIntegration_CorpAssetsSync_StoresOfficeFolders(t *testing.T) {
+	sqlDB := newIntegrationDB(t)
+	seedIntegrationCharacter(t, sqlDB, 90000001, 0)
+	seedIntegrationCorporation(t, sqlDB, 99000001, 90000001)
+	srv := newESIServer(t, map[string]string{
+		"/latest/corporations/99000001/assets/": "corporation_assets_officefolders.json",
+	})
+	w := newIntegrationWorker(t, sqlDB, srv.URL)
+	ctx := context.Background()
+
+	w.syncSubject(ctx, ownerTypeCorporation, 99000001, endpointCorpAssets)
+
+	// corp_assets row must exist with correct item_id and location_id.
+	var itemID, locationID int64
+	if err := sqlDB.QueryRow(
+		`SELECT item_id, location_id FROM corp_assets WHERE owner_id=99000001`,
+	).Scan(&itemID, &locationID); err != nil {
+		t.Fatalf("querying corp_assets: %v", err)
+	}
+	if itemID != 1052718829566 {
+		t.Errorf("item_id: got %d, want 1052718829566", itemID)
+	}
+	if locationID != 60015146 {
+		t.Errorf("location_id: got %d, want 60015146", locationID)
+	}
+
+	// sync_state.cache_until must be in the future.
+	var cacheUntil time.Time
+	if err := sqlDB.QueryRow(
+		`SELECT cache_until FROM sync_state
+		 WHERE owner_type='corporation' AND owner_id=99000001 AND endpoint='corp_assets'`,
+	).Scan(&cacheUntil); err != nil {
+		t.Fatalf("querying sync_state for corp_assets: %v", err)
+	}
+	if !cacheUntil.After(time.Now()) {
+		t.Errorf("want cache_until in the future, got %v", cacheUntil)
 	}
 }
 

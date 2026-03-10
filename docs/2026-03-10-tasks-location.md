@@ -118,7 +118,7 @@ Update `technical-reference.md` to reflect schema changes.
 Add integration test `TestSyncIntegration_CorpAssetsSync_StoresOfficeFolders` that verifies
 corp_assets rows are inserted with correct `item_id` and `location_id` after sync.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
