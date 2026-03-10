@@ -105,7 +105,7 @@ using the helpers from TASK-01.
 - Code: readability of test helpers and seed functions; no duplication between contract tests and existing mock-based tests; helper functions call `t.Helper()`; JSON shape assertions are clear and intentional
 - Security: no real credentials or tokens in test fixtures; test files are `_test.go` only (not compiled into production binary)
 - Documentation: verify `technical-reference.md` still accurately describes all API response shapes — update if any discrepancy is found between the documented contract and what the tests actually assert; verify `architecture.md` — no changes expected
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
