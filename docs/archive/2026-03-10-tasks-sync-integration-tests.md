@@ -1,6 +1,6 @@
 # 2026-03-10-tasks-sync-integration-tests.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Context
 
@@ -142,4 +142,4 @@ Blueprints must exist before jobs can be inserted (FK constraint); seed them via
 - These are internal tests with no user-visible behavior change → no CHANGELOG entry needed; confirm this explicitly
 - Verify `testing-strategy.md` section 3 still matches what was implemented; update if any scope diverged
 - Update `MEMORY.md` active task pointer after this file is archived
-**Status:** ⬜ Pending
+**Status:** ✅ Done
