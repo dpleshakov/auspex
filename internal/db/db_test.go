@@ -9,6 +9,7 @@ var expectedTables = []string{
 	"eve_categories", "eve_groups", "eve_types",
 	"characters", "corporations",
 	"blueprints", "jobs", "sync_state",
+	"eve_locations", "corp_assets",
 }
 
 func TestOpen_TablesCreated(t *testing.T) {

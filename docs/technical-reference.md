@@ -55,14 +55,15 @@ CREATE TABLE corporations (
 
 -- BPO library (all characters + corporations combined)
 CREATE TABLE blueprints (
-    id          INTEGER PRIMARY KEY,  -- EVE item_id
-    owner_type  TEXT NOT NULL,        -- 'character' | 'corporation'
-    owner_id    INTEGER NOT NULL,
-    type_id     INTEGER NOT NULL REFERENCES eve_types(id),
-    location_id INTEGER NOT NULL,
-    me_level    INTEGER NOT NULL DEFAULT 0,
-    te_level    INTEGER NOT NULL DEFAULT 0,
-    updated_at  DATETIME NOT NULL
+    id            INTEGER PRIMARY KEY,  -- EVE item_id
+    owner_type    TEXT NOT NULL,        -- 'character' | 'corporation'
+    owner_id      INTEGER NOT NULL,
+    type_id       INTEGER NOT NULL REFERENCES eve_types(id),
+    location_id   INTEGER NOT NULL,
+    location_flag TEXT NOT NULL DEFAULT '',  -- ESI location_flag (e.g. 'CorpSAG3', 'Hangar')
+    me_level      INTEGER NOT NULL DEFAULT 0,
+    te_level      INTEGER NOT NULL DEFAULT 0,
+    updated_at    DATETIME NOT NULL
 );
 
 -- Active and ready research jobs
@@ -77,6 +78,14 @@ CREATE TABLE jobs (
     start_date   DATETIME NOT NULL,
     end_date     DATETIME NOT NULL,
     updated_at   DATETIME NOT NULL
+);
+
+-- Corp assets cache (OfficeFolder entries — maps office item_id to real station/structure)
+CREATE TABLE corp_assets (
+    item_id       INTEGER PRIMARY KEY,  -- Corporation Office Item ID (= location_id in corp blueprints)
+    owner_id      INTEGER NOT NULL,     -- corporation_id
+    location_id   INTEGER NOT NULL,     -- real station or structure ID
+    location_type TEXT NOT NULL
 );
 
 -- ESI cache state per subject per endpoint

@@ -14,6 +14,7 @@ type Querier interface {
 	CountOverdueJobs(ctx context.Context) (int64, error)
 	DeleteBlueprintsByOwner(ctx context.Context, arg DeleteBlueprintsByOwnerParams) error
 	DeleteCharacter(ctx context.Context, id int64) error
+	DeleteCorpAssetsByOwner(ctx context.Context, ownerID int64) error
 	DeleteCorporation(ctx context.Context, id int64) error
 	DeleteJobByID(ctx context.Context, id int64) error
 	DeleteJobsByOwner(ctx context.Context, arg DeleteJobsByOwnerParams) error
@@ -21,6 +22,7 @@ type Querier interface {
 	// sqlc queries for the characters table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetCharacter(ctx context.Context, id int64) (Character, error)
+	GetCorpAsset(ctx context.Context, itemID int64) (GetCorpAssetRow, error)
 	// sqlc queries for the corporations table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	GetCorporation(ctx context.Context, id int64) (Corporation, error)
@@ -38,6 +40,7 @@ type Querier interface {
 	InsertLocation(ctx context.Context, arg InsertLocationParams) error
 	InsertOrIgnoreCorporation(ctx context.Context, arg InsertOrIgnoreCorporationParams) error
 	ListBlueprintLocationIDsByOwner(ctx context.Context, arg ListBlueprintLocationIDsByOwnerParams) ([]int64, error)
+	ListBlueprintLocationsByOwner(ctx context.Context, arg ListBlueprintLocationsByOwnerParams) ([]ListBlueprintLocationsByOwnerRow, error)
 	ListBlueprintTypeIDsByOwner(ctx context.Context, arg ListBlueprintTypeIDsByOwnerParams) ([]int64, error)
 	ListBlueprints(ctx context.Context, arg ListBlueprintsParams) ([]ListBlueprintsRow, error)
 	ListCharacterSlotUsage(ctx context.Context) ([]ListCharacterSlotUsageRow, error)
@@ -53,6 +56,8 @@ type Querier interface {
 	// See https://docs.sqlc.dev for query annotation syntax.
 	UpsertBlueprint(ctx context.Context, arg UpsertBlueprintParams) error
 	UpsertCharacter(ctx context.Context, arg UpsertCharacterParams) error
+	// sqlc queries for the corp_assets table.
+	UpsertCorpAsset(ctx context.Context, arg UpsertCorpAssetParams) error
 	// sqlc queries for the jobs table.
 	// See https://docs.sqlc.dev for query annotation syntax.
 	UpsertJob(ctx context.Context, arg UpsertJobParams) error

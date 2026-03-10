@@ -230,3 +230,17 @@ func (m *mockQuerier) ListCharactersByCorporation(ctx context.Context, corporati
 func (m *mockQuerier) UpdateSyncStateError(_ context.Context, _ store.UpdateSyncStateErrorParams) error {
 	return nil
 }
+
+func (m *mockQuerier) DeleteCorpAssetsByOwner(_ context.Context, _ int64) error { return nil }
+
+func (m *mockQuerier) GetCorpAsset(_ context.Context, _ int64) (store.GetCorpAssetRow, error) {
+	return store.GetCorpAssetRow{}, nil
+}
+
+func (m *mockQuerier) ListBlueprintLocationsByOwner(_ context.Context, _ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+	return nil, nil
+}
+
+func (m *mockQuerier) UpsertCorpAsset(_ context.Context, _ store.UpsertCorpAssetParams) error {
+	return nil
+}
