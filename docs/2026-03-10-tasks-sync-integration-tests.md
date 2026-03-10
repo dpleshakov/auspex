@@ -120,7 +120,7 @@ Blueprints must exist before jobs can be inserted (FK constraint); seed them via
 
 **Definition of done:** all new tests pass, `go test ./internal/sync/...` green.
 
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
