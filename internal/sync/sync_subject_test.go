@@ -80,11 +80,19 @@ func (m *mockESIClient) GetUniverseSystem(ctx context.Context, id int64) (string
 	panic("unexpected call to GetUniverseSystem")
 }
 
+func (m *mockESIClient) GetCorporationAssets(_ context.Context, _ int64, _ string, _ int) ([]esi.CorpAsset, int, time.Time, error) {
+	panic("unexpected call to GetCorporationAssets")
+}
+
 func (m *mockESIClient) GetCorporationOffices(ctx context.Context, id int64, token string) ([]esi.CorporationOffice, error) {
 	if m.getCorporationOfficesFunc != nil {
 		return m.getCorporationOfficesFunc(ctx, id, token)
 	}
 	panic("unexpected call to GetCorporationOffices")
+}
+
+func (m *mockESIClient) GetStation(_ context.Context, _ int64) (string, error) {
+	panic("unexpected call to GetStation")
 }
 
 // Compile-time assertion: *mockESIClient must satisfy esi.Client.

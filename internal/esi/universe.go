@@ -179,3 +179,23 @@ func (c *httpClient) GetUniverseSystem(ctx context.Context, systemID int64) (str
 	}
 	return s.Name, nil
 }
+
+// esiStationResponse is the minimal subset of GET /universe/stations/{id}/ we need.
+type esiStationResponse struct {
+	Name string `json:"name"`
+}
+
+// GetStation fetches the name of an NPC station. Public endpoint, no token required.
+func (c *httpClient) GetStation(ctx context.Context, stationID int64) (string, error) {
+	url := fmt.Sprintf("%s/universe/stations/%d/", c.baseURL, stationID)
+	body, _, err := c.do(ctx, url, "")
+	if err != nil {
+		return "", fmt.Errorf("fetching station %d: %w", stationID, err)
+	}
+
+	var s esiStationResponse
+	if err := json.Unmarshal(body, &s); err != nil {
+		return "", fmt.Errorf("parsing station %d response: %w", stationID, err)
+	}
+	return s.Name, nil
+}

@@ -89,6 +89,17 @@ func (c *Client) GetCorporationJobs(ctx context.Context, corporationID int64, _ 
 	return c.inner.GetCorporationJobs(ctx, corporationID, token)
 }
 
+// GetCorporationAssets fetches one page of corporation assets,
+// using the delegate character's token (refreshed if needed).
+// The token parameter is ignored.
+func (c *Client) GetCorporationAssets(ctx context.Context, corpID int64, _ string, page int) ([]esi.CorpAsset, int, time.Time, error) {
+	token, err := c.tokenForCorporation(ctx, corpID)
+	if err != nil {
+		return nil, 0, time.Time{}, fmt.Errorf("getting token for corporation %d: %w", corpID, err)
+	}
+	return c.inner.GetCorporationAssets(ctx, corpID, token, page)
+}
+
 // GetCorporationOffices fetches offices rented by the given corporation,
 // using the delegate character's token (refreshed if needed).
 // The token parameter is ignored.
@@ -115,6 +126,11 @@ func (c *Client) GetUniverseStructure(ctx context.Context, structureID int64, _ 
 		return esi.UniverseStructure{}, fmt.Errorf("getting token for structure %d: %w", structureID, err)
 	}
 	return c.inner.GetUniverseStructure(ctx, structureID, token)
+}
+
+// GetStation fetches an NPC station name. Public endpoint, no auth required.
+func (c *Client) GetStation(ctx context.Context, stationID int64) (string, error) {
+	return c.inner.GetStation(ctx, stationID)
 }
 
 // GetUniverseSystem fetches a solar system name. Public endpoint, no auth required.
