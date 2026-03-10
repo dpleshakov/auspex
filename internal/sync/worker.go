@@ -242,14 +242,15 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 	now := w.now()
 	for _, bp := range bps {
 		if err := w.store.UpsertBlueprint(ctx, store.UpsertBlueprintParams{
-			ID:         bp.ItemID,
-			OwnerType:  ownerType,
-			OwnerID:    ownerID,
-			TypeID:     bp.TypeID,
-			LocationID: bp.LocationID,
-			MeLevel:    bp.MELevel,
-			TeLevel:    bp.TELevel,
-			UpdatedAt:  now,
+			ID:           bp.ItemID,
+			OwnerType:    ownerType,
+			OwnerID:      ownerID,
+			TypeID:       bp.TypeID,
+			LocationID:   bp.LocationID,
+			LocationFlag: bp.LocationFlag,
+			MeLevel:      bp.MELevel,
+			TeLevel:      bp.TELevel,
+			UpdatedAt:    now,
 		}); err != nil {
 			// A blueprint whose type_id is missing from eve_types (e.g. because
 			// type resolution failed due to a transient ESI error) fails the FK

@@ -2,16 +2,17 @@
 -- See https://docs.sqlc.dev for query annotation syntax.
 
 -- name: UpsertBlueprint :exec
-INSERT INTO blueprints (id, owner_type, owner_id, type_id, location_id, me_level, te_level, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO blueprints (id, owner_type, owner_id, type_id, location_id, location_flag, me_level, te_level, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    owner_type  = excluded.owner_type,
-    owner_id    = excluded.owner_id,
-    type_id     = excluded.type_id,
-    location_id = excluded.location_id,
-    me_level    = excluded.me_level,
-    te_level    = excluded.te_level,
-    updated_at  = excluded.updated_at;
+    owner_type    = excluded.owner_type,
+    owner_id      = excluded.owner_id,
+    type_id       = excluded.type_id,
+    location_id   = excluded.location_id,
+    location_flag = excluded.location_flag,
+    me_level      = excluded.me_level,
+    te_level      = excluded.te_level,
+    updated_at    = excluded.updated_at;
 
 -- name: DeleteBlueprintsByOwner :exec
 DELETE FROM blueprints WHERE owner_type = ? AND owner_id = ?;
@@ -23,6 +24,11 @@ WHERE owner_type = ? AND owner_id = ?;
 
 -- name: ListBlueprintLocationIDsByOwner :many
 SELECT DISTINCT location_id
+FROM blueprints
+WHERE owner_type = ? AND owner_id = ?;
+
+-- name: ListBlueprintLocationsByOwner :many
+SELECT DISTINCT location_id, location_flag
 FROM blueprints
 WHERE owner_type = ? AND owner_id = ?;
 

@@ -97,7 +97,7 @@ Update `technical-reference.md` to reflect new ESI endpoints.
 
 Update `technical-reference.md` to reflect schema changes.
 **Definition of done:** working code + tests + committed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

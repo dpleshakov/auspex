@@ -210,6 +210,23 @@ func (m *mockQuerier) InsertLocation(_ context.Context, arg store.InsertLocation
 	panic("unexpected call to InsertLocation")
 }
 
+func (m *mockQuerier) DeleteCorpAssetsByOwner(_ context.Context, _ int64) error {
+	return nil
+}
+
+func (m *mockQuerier) GetCorpAsset(_ context.Context, _ int64) (store.GetCorpAssetRow, error) {
+	return store.GetCorpAssetRow{}, nil
+}
+
+func (m *mockQuerier) ListBlueprintLocationsByOwner(_ context.Context, arg store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+	// Default: empty list — resolveLocationIDs becomes a no-op, existing tests unaffected.
+	return nil, nil
+}
+
+func (m *mockQuerier) UpsertCorpAsset(_ context.Context, _ store.UpsertCorpAssetParams) error {
+	return nil
+}
+
 // Compile-time assertion: *mockQuerier must satisfy store.Querier.
 var _ store.Querier = (*mockQuerier)(nil)
 

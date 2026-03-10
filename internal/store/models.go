@@ -10,14 +10,15 @@ import (
 )
 
 type Blueprint struct {
-	ID         int64
-	OwnerType  string
-	OwnerID    int64
-	TypeID     int64
-	LocationID int64
-	MeLevel    int64
-	TeLevel    int64
-	UpdatedAt  time.Time
+	ID           int64
+	OwnerType    string
+	OwnerID      int64
+	TypeID       int64
+	LocationID   int64
+	MeLevel      int64
+	TeLevel      int64
+	UpdatedAt    time.Time
+	LocationFlag string
 }
 
 type Character struct {
@@ -29,6 +30,13 @@ type Character struct {
 	CreatedAt       time.Time
 	CorporationID   int64
 	CorporationName string
+}
+
+type CorpAsset struct {
+	ItemID       int64
+	OwnerID      int64
+	LocationID   int64
+	LocationType string
 }
 
 type Corporation struct {

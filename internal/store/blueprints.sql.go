@@ -59,6 +59,45 @@ func (q *Queries) ListBlueprintLocationIDsByOwner(ctx context.Context, arg ListB
 	return items, nil
 }
 
+const listBlueprintLocationsByOwner = `-- name: ListBlueprintLocationsByOwner :many
+SELECT DISTINCT location_id, location_flag
+FROM blueprints
+WHERE owner_type = ? AND owner_id = ?
+`
+
+type ListBlueprintLocationsByOwnerParams struct {
+	OwnerType string
+	OwnerID   int64
+}
+
+type ListBlueprintLocationsByOwnerRow struct {
+	LocationID   int64
+	LocationFlag string
+}
+
+func (q *Queries) ListBlueprintLocationsByOwner(ctx context.Context, arg ListBlueprintLocationsByOwnerParams) ([]ListBlueprintLocationsByOwnerRow, error) {
+	rows, err := q.db.QueryContext(ctx, listBlueprintLocationsByOwner, arg.OwnerType, arg.OwnerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListBlueprintLocationsByOwnerRow
+	for rows.Next() {
+		var i ListBlueprintLocationsByOwnerRow
+		if err := rows.Scan(&i.LocationID, &i.LocationFlag); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listBlueprintTypeIDsByOwner = `-- name: ListBlueprintTypeIDsByOwner :many
 SELECT DISTINCT type_id
 FROM blueprints
@@ -224,27 +263,29 @@ func (q *Queries) ListBlueprints(ctx context.Context, arg ListBlueprintsParams) 
 
 const upsertBlueprint = `-- name: UpsertBlueprint :exec
 
-INSERT INTO blueprints (id, owner_type, owner_id, type_id, location_id, me_level, te_level, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO blueprints (id, owner_type, owner_id, type_id, location_id, location_flag, me_level, te_level, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
-    owner_type  = excluded.owner_type,
-    owner_id    = excluded.owner_id,
-    type_id     = excluded.type_id,
-    location_id = excluded.location_id,
-    me_level    = excluded.me_level,
-    te_level    = excluded.te_level,
-    updated_at  = excluded.updated_at
+    owner_type    = excluded.owner_type,
+    owner_id      = excluded.owner_id,
+    type_id       = excluded.type_id,
+    location_id   = excluded.location_id,
+    location_flag = excluded.location_flag,
+    me_level      = excluded.me_level,
+    te_level      = excluded.te_level,
+    updated_at    = excluded.updated_at
 `
 
 type UpsertBlueprintParams struct {
-	ID         int64
-	OwnerType  string
-	OwnerID    int64
-	TypeID     int64
-	LocationID int64
-	MeLevel    int64
-	TeLevel    int64
-	UpdatedAt  time.Time
+	ID           int64
+	OwnerType    string
+	OwnerID      int64
+	TypeID       int64
+	LocationID   int64
+	LocationFlag string
+	MeLevel      int64
+	TeLevel      int64
+	UpdatedAt    time.Time
 }
 
 // sqlc queries for the blueprints table.
@@ -256,6 +297,7 @@ func (q *Queries) UpsertBlueprint(ctx context.Context, arg UpsertBlueprintParams
 		arg.OwnerID,
 		arg.TypeID,
 		arg.LocationID,
+		arg.LocationFlag,
 		arg.MeLevel,
 		arg.TeLevel,
 		arg.UpdatedAt,
