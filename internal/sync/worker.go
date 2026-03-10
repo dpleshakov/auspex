@@ -25,6 +25,7 @@ import (
 )
 
 const (
+	endpointCorpAssets   = "corp_assets"
 	endpointBlueprints   = "blueprints"
 	endpointJobs         = "jobs"
 	ownerTypeCharacter   = "character"

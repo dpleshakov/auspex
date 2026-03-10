@@ -146,8 +146,9 @@ func TestSyncIntegration_CharacterBlueprints_SecondSync_Upserts(t *testing.T) {
 }
 
 // TestSyncIntegration_CorporationBlueprints_RowsMatchFixture verifies that after
-// a corporation blueprint sync: the blueprint row exists, and eve_locations has a
-// resolved name for the office item ID (not the sentinel).
+// a corporation blueprint sync followed by a corp assets sync: the blueprint row
+// exists, and eve_locations has the exact station name resolved via corp_assets
+// (CorpSAG3 location_id → OfficeFolder item → real station name).
 func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 	sqlDB := newIntegrationDB(t)
 	seedIntegrationCharacter(t, sqlDB, 90000001, 0)
@@ -157,12 +158,13 @@ func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 		"/latest/universe/types/5000":              "universe_type_5000.json",
 		"/latest/universe/groups/260":              "universe_group_260.json",
 		"/latest/universe/categories/26":           "universe_category_26.json",
-		"/latest/corporations/99000001/offices/":   "corporation_offices.json",
-		"/latest/universe/names/":                  "universe_names_corp_station.json",
+		"/latest/corporations/99000001/assets":     "corporation_assets_officefolders.json",
+		"/latest/universe/stations/60015146":       "universe_station_60015146.json",
 	})
 	w := newIntegrationWorker(t, sqlDB, srv.URL)
 	ctx := context.Background()
 
+	w.syncSubject(ctx, ownerTypeCorporation, 99000001, endpointCorpAssets)
 	w.syncSubject(ctx, ownerTypeCorporation, 99000001, endpointBlueprints)
 
 	// Blueprint row exists.
@@ -176,18 +178,16 @@ func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 		t.Errorf("want 1 corp blueprint, got %d", count)
 	}
 
-	// eve_locations has a resolved name for the office item ID (not the sentinel).
+	// eve_locations has the exact resolved station name via corp_assets lookup.
+	const wantName = "Ibura IX - Moon 11 - Spacelane Patrol Testing Facilities"
 	var locName string
 	if err := sqlDB.QueryRow(
 		`SELECT name FROM eve_locations WHERE id=1052718829566`,
 	).Scan(&locName); err != nil {
-		t.Fatalf("querying eve_locations for office item ID: %v", err)
+		t.Fatalf("querying eve_locations for corp hangar location ID: %v", err)
 	}
-	if locName == corpHangarSentinel {
-		t.Errorf("expected a resolved station name, got sentinel %q", locName)
-	}
-	if locName == "" {
-		t.Error("expected a non-empty station name in eve_locations")
+	if locName != wantName {
+		t.Errorf("eve_locations name: got %q, want %q", locName, wantName)
 	}
 }
 

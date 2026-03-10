@@ -47,7 +47,7 @@ via corp assets rather than offices. Steps:
 After this task the test **intentionally fails** (red TDD state). `make build` will be broken until
 TASK-05 completes. This is expected — the test documents the desired behavior before the fix exists.
 **Definition of done:** test written, fixtures added, committed; `go test` fails on this test case
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
