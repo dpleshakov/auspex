@@ -132,7 +132,7 @@ Blueprints must exist before jobs can be inserted (FK constraint); seed them via
 - Security: no real tokens in fixtures, no outbound network calls, `t.Cleanup` registered for every server and DB
 - Documentation: verify `technical-reference.md` and `architecture.md` still reflect reality; update only if something changed
 - Run `make build` and `make lint` and confirm both pass clean
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
