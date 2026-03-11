@@ -40,8 +40,7 @@ type characterSlotJSON struct {
 
 type summaryJSON struct {
 	IdleBlueprints    int64               `json:"idle_blueprints"`
-	OverdueJobs       int64               `json:"overdue_jobs"`
-	CompletingToday   int64               `json:"completing_today"`
+	ReadyJobs         int64               `json:"ready_jobs"`
 	FreeResearchSlots int64               `json:"free_research_slots"`
 	Characters        []characterSlotJSON `json:"characters"`
 }
@@ -129,15 +128,9 @@ func (r *router) handleGetJobsSummary(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	overdue, err := r.q.CountOverdueJobs(ctx)
+	ready, err := r.q.CountReadyJobs(ctx)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to count overdue jobs")
-		return
-	}
-
-	completing, err := r.q.CountCompletingToday(ctx)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to count completing today")
+		writeError(w, http.StatusInternalServerError, "failed to count ready jobs")
 		return
 	}
 
@@ -159,8 +152,7 @@ func (r *router) handleGetJobsSummary(w http.ResponseWriter, req *http.Request) 
 	// FreeResearchSlots requires per-character skill data from ESI (not stored in MVP).
 	writeJSON(w, http.StatusOK, summaryJSON{
 		IdleBlueprints:    idle,
-		OverdueJobs:       overdue,
-		CompletingToday:   completing,
+		ReadyJobs:         ready,
 		FreeResearchSlots: 0,
 		Characters:        chars,
 	})

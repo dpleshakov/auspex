@@ -49,13 +49,9 @@ export default function SummaryBar({ summary: externalSummary }) {
         modifier={summary.idle_blueprints > 0 ? 'warn' : null}
       />
       <SummaryItem
-        label="Overdue Jobs"
-        value={summary.overdue_jobs}
-        modifier={summary.overdue_jobs > 0 ? 'danger' : null}
-      />
-      <SummaryItem
-        label="Completing Today"
-        value={summary.completing_today}
+        label="Ready Jobs"
+        value={summary.ready_jobs}
+        modifier={summary.ready_jobs > 0 ? 'danger' : null}
       />
       <SummaryItem
         label="Free Research Slots"

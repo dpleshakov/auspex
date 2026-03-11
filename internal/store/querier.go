@@ -9,9 +9,8 @@ import (
 )
 
 type Querier interface {
-	CountCompletingToday(ctx context.Context) (int64, error)
 	CountIdleBlueprints(ctx context.Context) (int64, error)
-	CountOverdueJobs(ctx context.Context) (int64, error)
+	CountReadyJobs(ctx context.Context) (int64, error)
 	DeleteBlueprintsByOwner(ctx context.Context, arg DeleteBlueprintsByOwnerParams) error
 	DeleteCharacter(ctx context.Context, id int64) error
 	DeleteCorpAssetsByOwner(ctx context.Context, ownerID int64) error
