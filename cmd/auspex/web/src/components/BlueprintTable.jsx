@@ -49,7 +49,7 @@ function getStatusPriority(row) {
   switch (getFullStatusLabel(row)) {
     case 'Ready':  return 0
     case 'Idle':   return 2
-    default:       return 3  // active variants
+    default:       return 1  // active variants — between ready and idle
   }
 }
 
@@ -191,6 +191,7 @@ export default function BlueprintTable({ blueprints: externalBlueprints }) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableMultiSort: true,
+    enableSortingRemoval: false,
   })
 
   if (loading) {
