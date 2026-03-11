@@ -69,6 +69,7 @@ Rewrite `getFullStatusLabel()` and `getRowClass()` accordingly. The label "Overd
 Fix in the TanStack Table `sortingFn` for the `end_date` column: treat `null`/`undefined`/empty values as lowest priority in both ascending and descending sort.
 
 **Definition of done:** working code + committed
+**Status:** ✅ Done
 
 ---
 
