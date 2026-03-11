@@ -15,6 +15,7 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Corporation blueprint location names now resolve correctly to the real station or structure name; blueprints stored in corporation hangar divisions (CorpSAG slots) were previously stuck on "Resolving…" indefinitely.
 - Blueprint and job libraries larger than 1000 items (one ESI page) are now fully synced; previously only the first page was fetched, silently dropping the remainder.
 
 ---
