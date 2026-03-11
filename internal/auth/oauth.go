@@ -36,6 +36,7 @@ const (
 
 // eveScopes are the ESI OAuth2 scopes required for Auspex MVP.
 var eveScopes = []string{
+	"esi-assets.read_corporation_assets.v1",
 	"esi-characters.read_blueprints.v1",
 	"esi-corporations.read_blueprints.v1",
 	"esi-corporations.read_facilities.v1",
