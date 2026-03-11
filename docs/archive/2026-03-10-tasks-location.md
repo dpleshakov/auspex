@@ -1,6 +1,6 @@
 # 2026-03-10-tasks-location.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
@@ -173,4 +173,4 @@ After this task `go test ./...` passes, including the TASK-01 integration test.
 - Update user-facing documentation (README, `auspex.example.yaml`) with the new required ESI scope `esi-assets.read_corporation_assets.v1`
 - Verify `technical-reference.md` is up to date — new ESI endpoints, schema changes (`corp_assets` table, `blueprints.location_flag`), new sync endpoint `corp_assets`
 - Update `CHANGELOG.md` — one entry: corp blueprint location names now resolve correctly to real station/structure names; following the format in `process-changelog.md`
-**Status:** ⬜ Pending
+**Status:** ✅ Done
