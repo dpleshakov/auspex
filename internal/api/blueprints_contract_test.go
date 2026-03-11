@@ -143,3 +143,43 @@ func TestContract_GetBlueprints_FilterByOwner(t *testing.T) {
 		t.Errorf("expected 1 blueprint for owner 3003, got %d", len(items))
 	}
 }
+
+// TestContract_GetJobsSummary_ActiveJobPastEndDateCountedAsReady verifies that
+// a job with status="active" whose end_date has already passed is counted in
+// ready_jobs — i.e. treated as ready to collect regardless of whether ESI has
+// transitioned the status field yet.
+func TestContract_GetJobsSummary_ActiveJobPastEndDateCountedAsReady(t *testing.T) {
+	sqlDB := newContractDB(t)
+	seedCharacter(t, sqlDB, 5001, "Tester", 0)
+	seedBlueprint(t, sqlDB, BlueprintSeed{ID: 8001, OwnerType: "character", OwnerID: 5001})
+	seedJob(t, sqlDB, JobSeed{
+		ID:          6001,
+		BlueprintID: 8001,
+		OwnerType:   "character",
+		OwnerID:     5001,
+		InstallerID: 5001,
+		Activity:    "me_research",
+		Status:      "active",                       // ESI has not transitioned yet
+		EndDate:     time.Now().Add(-8 * time.Hour), // finished 8 hours ago
+	})
+	srv := newContractServer(t, sqlDB)
+
+	resp, err := http.Get(srv.URL + "/api/jobs/summary")
+	if err != nil {
+		t.Fatalf("GET /api/jobs/summary: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+	var got summaryJSON
+	if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	// A job whose end_date is in the past must be counted as ready, regardless
+	// of whether its status field has been transitioned to "ready" by ESI.
+	if got.ReadyJobs != 1 {
+		t.Errorf("ready_jobs = %d, want 1 (active job with past end_date should be counted)", got.ReadyJobs)
+	}
+}
