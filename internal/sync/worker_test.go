@@ -65,14 +65,11 @@ func (m *mockQuerier) GetSyncState(_ context.Context, arg store.GetSyncStatePara
 }
 
 // Stub implementations for methods not exercised in TASK-09 tests.
-func (m *mockQuerier) CountCompletingToday(_ context.Context) (int64, error) {
-	panic("unexpected call to CountCompletingToday")
-}
 func (m *mockQuerier) CountIdleBlueprints(_ context.Context) (int64, error) {
 	panic("unexpected call to CountIdleBlueprints")
 }
-func (m *mockQuerier) CountOverdueJobs(_ context.Context) (int64, error) {
-	panic("unexpected call to CountOverdueJobs")
+func (m *mockQuerier) CountReadyJobs(_ context.Context) (int64, error) {
+	panic("unexpected call to CountReadyJobs")
 }
 func (m *mockQuerier) DeleteBlueprintsByOwner(_ context.Context, _ store.DeleteBlueprintsByOwnerParams) error {
 	panic("unexpected call to DeleteBlueprintsByOwner")

@@ -30,13 +30,9 @@ WHERE NOT EXISTS (
     SELECT 1 FROM jobs j WHERE j.blueprint_id = b.id
 );
 
--- name: CountOverdueJobs :one
+-- name: CountReadyJobs :one
 SELECT COUNT(*) FROM jobs
-WHERE status = 'ready' AND end_date < datetime('now');
-
--- name: CountCompletingToday :one
-SELECT COUNT(*) FROM jobs
-WHERE status = 'active' AND date(end_date) = date('now');
+WHERE status = 'ready';
 
 -- name: ListCharacterSlotUsage :many
 SELECT

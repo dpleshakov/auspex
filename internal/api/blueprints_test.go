@@ -207,8 +207,7 @@ func TestGetBlueprints_DBError(t *testing.T) {
 func TestGetJobsSummary_Counts(t *testing.T) {
 	mux := NewRouter(&mockQuerier{
 		CountIdleBlueprintsFn:    func(_ context.Context) (int64, error) { return 5, nil },
-		CountOverdueJobsFn:       func(_ context.Context) (int64, error) { return 3, nil },
-		CountCompletingTodayFn:   func(_ context.Context) (int64, error) { return 1, nil },
+		CountReadyJobsFn:         func(_ context.Context) (int64, error) { return 3, nil },
 		ListCharacterSlotUsageFn: func(_ context.Context) ([]store.ListCharacterSlotUsageRow, error) { return nil, nil },
 	}, nil, nil, testFS())
 
@@ -226,11 +225,8 @@ func TestGetJobsSummary_Counts(t *testing.T) {
 	if got.IdleBlueprints != 5 {
 		t.Errorf("idle_blueprints = %d, want 5", got.IdleBlueprints)
 	}
-	if got.OverdueJobs != 3 {
-		t.Errorf("overdue_jobs = %d, want 3", got.OverdueJobs)
-	}
-	if got.CompletingToday != 1 {
-		t.Errorf("completing_today = %d, want 1", got.CompletingToday)
+	if got.ReadyJobs != 3 {
+		t.Errorf("ready_jobs = %d, want 3", got.ReadyJobs)
 	}
 }
 

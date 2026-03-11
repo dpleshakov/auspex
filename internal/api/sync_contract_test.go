@@ -26,8 +26,7 @@ func TestContract_GetJobsSummary_EmptyDB(t *testing.T) {
 	}
 
 	assertField[float64](t, body, "idle_blueprints")
-	assertField[float64](t, body, "overdue_jobs")
-	assertField[float64](t, body, "completing_today")
+	assertField[float64](t, body, "ready_jobs")
 	assertField[float64](t, body, "free_research_slots")
 
 	// characters must be present and be an array (may be empty).

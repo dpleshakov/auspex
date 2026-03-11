@@ -26,8 +26,7 @@ type mockQuerier struct {
 
 	ListBlueprintsFn         func(ctx context.Context, arg store.ListBlueprintsParams) ([]store.ListBlueprintsRow, error)
 	CountIdleBlueprintsFn    func(ctx context.Context) (int64, error)
-	CountOverdueJobsFn       func(ctx context.Context) (int64, error)
-	CountCompletingTodayFn   func(ctx context.Context) (int64, error)
+	CountReadyJobsFn         func(ctx context.Context) (int64, error)
 	ListCharacterSlotUsageFn func(ctx context.Context) ([]store.ListCharacterSlotUsageRow, error)
 	ListSyncStatusFn         func(ctx context.Context) ([]store.ListSyncStatusRow, error)
 }
@@ -108,13 +107,6 @@ func (m *mockQuerier) DeleteCorporation(ctx context.Context, id int64) error {
 
 // ---- Stub implementations for unused Querier methods ----
 
-func (m *mockQuerier) CountCompletingToday(ctx context.Context) (int64, error) {
-	if m.CountCompletingTodayFn != nil {
-		return m.CountCompletingTodayFn(ctx)
-	}
-	return 0, nil
-}
-
 func (m *mockQuerier) CountIdleBlueprints(ctx context.Context) (int64, error) {
 	if m.CountIdleBlueprintsFn != nil {
 		return m.CountIdleBlueprintsFn(ctx)
@@ -122,9 +114,9 @@ func (m *mockQuerier) CountIdleBlueprints(ctx context.Context) (int64, error) {
 	return 0, nil
 }
 
-func (m *mockQuerier) CountOverdueJobs(ctx context.Context) (int64, error) {
-	if m.CountOverdueJobsFn != nil {
-		return m.CountOverdueJobsFn(ctx)
+func (m *mockQuerier) CountReadyJobs(ctx context.Context) (int64, error) {
+	if m.CountReadyJobsFn != nil {
+		return m.CountReadyJobsFn(ctx)
 	}
 	return 0, nil
 }

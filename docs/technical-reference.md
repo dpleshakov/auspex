@@ -387,9 +387,7 @@ Returns the BPO library. All query parameters are optional and combinable.
 |----------------|-----------|
 | Idle | `job = null` |
 | Active | `job.status = "active"` |
-| Ready | `job.status = "ready"` AND `end_date >= now` |
-| Overdue | `job.status = "ready"` AND `end_date < now` |
-| Completing today | `job.status = "active"` AND `end_date` is today |
+| Ready | `job.status = "ready"` |
 
 ---
 
@@ -404,8 +402,7 @@ Returns aggregate counts and per-character slot usage for the dashboard summary 
 ```json
 {
   "idle_blueprints": 12,
-  "overdue_jobs": 2,
-  "completing_today": 3,
+  "ready_jobs": 3,
   "free_research_slots": 0,
   "characters": [
     {
@@ -420,8 +417,7 @@ Returns aggregate counts and per-character slot usage for the dashboard summary 
 | Field | Type | Description |
 |-------|------|-------------|
 | `idle_blueprints` | integer | BPOs with no active or ready job |
-| `overdue_jobs` | integer | Jobs with `status = "ready"` and `end_date < now` |
-| `completing_today` | integer | Jobs with `status = "active"` and `end_date` is today |
+| `ready_jobs` | integer | Jobs with `status = "ready"` (finished, not yet collected) |
 | `free_research_slots` | integer | Always `0` in MVP (requires per-character skill data) |
 | `characters` | array | Per-character slot usage |
 | `characters[].id` | integer | EVE character ID |

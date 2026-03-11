@@ -10,18 +10,6 @@ import (
 	"time"
 )
 
-const countCompletingToday = `-- name: CountCompletingToday :one
-SELECT COUNT(*) FROM jobs
-WHERE status = 'active' AND date(end_date) = date('now')
-`
-
-func (q *Queries) CountCompletingToday(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCompletingToday)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countIdleBlueprints = `-- name: CountIdleBlueprints :one
 SELECT COUNT(*) FROM blueprints b
 WHERE NOT EXISTS (
@@ -36,13 +24,13 @@ func (q *Queries) CountIdleBlueprints(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const countOverdueJobs = `-- name: CountOverdueJobs :one
+const countReadyJobs = `-- name: CountReadyJobs :one
 SELECT COUNT(*) FROM jobs
-WHERE status = 'ready' AND end_date < datetime('now')
+WHERE status = 'ready'
 `
 
-func (q *Queries) CountOverdueJobs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countOverdueJobs)
+func (q *Queries) CountReadyJobs(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countReadyJobs)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

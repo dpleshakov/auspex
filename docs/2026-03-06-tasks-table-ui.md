@@ -28,6 +28,7 @@ Frontend:
 - Update `SummaryBar` component: rename `overdue_jobs` → `ready_jobs`, remove "Completing today" tile
 
 **Definition of done:** working code + tests + committed
+**Status:** ✅ Done
 
 ---
 
