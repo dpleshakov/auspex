@@ -373,12 +373,13 @@ func TestResolveLocationIDs_CorpHangar_ResolvesViaCorpAssets_NPCStation(t *testi
 	}
 }
 
-// --- TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel ---
-// Verifies that a corp blueprint whose office item ID is not in corp_assets gets sentinel stored.
-func TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel(t *testing.T) {
+// --- TestResolveLocationIDs_CorpHangar_AssetNotFound_NoInsert ---
+// Verifies that when corp_assets are not yet synced, no location record is stored.
+// The location stays unresolved so the next cycle can retry after assets are populated.
+func TestResolveLocationIDs_CorpHangar_AssetNotFound_NoInsert(t *testing.T) {
 	const officeItemID int64 = 1_052_718_829_567
 
-	var insertedLocations []store.InsertLocationParams
+	insertCalled := false
 
 	q := &mockQuerier{
 		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
@@ -392,8 +393,8 @@ func TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel(t *testing.T
 		getCorpAssetFunc: func(_ int64) (store.GetCorpAssetRow, error) {
 			return store.GetCorpAssetRow{}, errors.New("not found")
 		},
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
+		insertLocationFunc: func(_ store.InsertLocationParams) error {
+			insertCalled = true
 			return nil
 		},
 	}
@@ -403,14 +404,8 @@ func TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel(t *testing.T
 	w := New(q, esiMock, time.Minute)
 	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
 
-	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call for sentinel, got %d", len(insertedLocations))
-	}
-	if insertedLocations[0].ID != officeItemID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
-	}
-	if insertedLocations[0].Name != corpHangarSentinel {
-		t.Errorf("InsertLocation Name (asset not found): got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	if insertCalled {
+		t.Error("InsertLocation must not be called when corp_assets not yet synced — location must stay unresolved so the next cycle can retry")
 	}
 }
 

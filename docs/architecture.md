@@ -186,10 +186,11 @@ Endpoints used:
 - `GET /characters/{id}/industry/jobs`
 - `GET /corporations/{id}/blueprints`
 - `GET /corporations/{id}/industry/jobs`
-- `GET /corporations/{id}/offices/` (maps office item IDs to NPC station IDs)
+- `GET /corporations/{id}/assets/?page=N` (corporation assets; used to resolve corp blueprint office item IDs to real station/structure IDs via OfficeFolder entries)
 - `GET /universe/types/{type_id}`
 - `GET /universe/groups/{group_id}`
 - `GET /universe/categories/{category_id}`
+- `GET /universe/stations/{id}/` (NPC station names)
 - `POST /universe/names/` (bulk resolve NPC stations)
 - `GET /universe/structures/{id}/` (player-owned structures; authenticated)
 - `GET /universe/systems/{id}/` (solar system names; cached in `eve_locations`)
@@ -206,7 +207,7 @@ Starts as a goroutine at application startup. A ticker fires every N minutes (fr
 
 Receives a force-refresh signal via a channel from `api` — in this case ignores `cache_until`.
 
-After a successful blueprint sync, updates `sync_state` and triggers lazy resolution of any new `type_id`s and `location_id`s via `esi`. Location resolution covers NPC stations (via `POST /universe/names/`), player structures (via `GET /universe/structures/{id}/` + system name lookup), and corporation office item IDs (stored as sentinel "Corporation Hangar").
+For each corporation, syncs `corp_assets` before blueprints so that OfficeFolder mappings are fresh when location resolution runs. After a successful blueprint sync, updates `sync_state` and triggers lazy resolution of any new `type_id`s and `location_id`s via `esi`. Location resolution covers NPC stations (via `GET /universe/stations/{id}/`), player structures (via `GET /universe/structures/{id}/` + system name lookup), and corporation blueprint office item IDs (resolved via corp_assets OfficeFolder → real station/structure ID).
 
 #### `api`
 Chi router and HTTP handlers. Responsibility: accept HTTP requests, read data from `store`, return JSON responses. Never calls ESI directly.
@@ -229,7 +230,8 @@ type Client interface {
     GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
     GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)
     GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
-    GetCorporationOffices(ctx context.Context, corporationID int64, token string) ([]CorporationOffice, error)
+    GetCorporationAssets(ctx context.Context, corpID int64, token string, page int) ([]CorpAsset, int, time.Time, error)
+    GetStation(ctx context.Context, stationID int64) (string, error)
     GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error)
     GetUniverseSystem(ctx context.Context, systemID int64) (string, error)
     GetUniverseType(ctx context.Context, typeID int64) (UniverseType, error)
@@ -281,7 +283,7 @@ User → GET /auth/eve/login
 ```
 sync worker (ticker every N minutes)
   → store: SELECT all characters + corporations
-  → for each subject:
+  → for each character: [blueprints, jobs]
       → store: SELECT sync_state WHERE owner = subject
       → if cache_until > now: skip
       → auth: ensure token is fresh (refresh if needed)
@@ -293,10 +295,19 @@ sync worker (ticker every N minutes)
           → esi: GET /universe/types/{type_id}
           → store: INSERT INTO eve_types + eve_groups + eve_categories
       → for each location_id not yet in eve_locations:
-          → NPC stations (60M–64M): esi: POST /universe/names/ (bulk)
+          → NPC stations (60M–64M): esi: GET /universe/stations/{id}/
           → player structures (>= 1T): esi: GET /universe/structures/{id}/ + GET /universe/systems/{id}/
-          → corp office item IDs ([64M, 1T)): store sentinel "Corporation Hangar"
           → store: INSERT INTO eve_locations
+  → for each corporation: [corp_assets, blueprints, jobs]
+      → corp_assets sync first (before blueprints) so OfficeFolder mappings are fresh:
+          → esi: GET /corporations/{id}/assets/?page=N (all pages)
+          → store: DELETE corp_assets WHERE owner_id = corp; INSERT OfficeFolder entries
+      → blueprints + jobs: same as character flow above
+      → location resolution for corp blueprints with CorpSAG*/CorpDeliveries flag:
+          → look up office item ID in corp_assets → get real station/structure ID
+          → NPC station: esi: GET /universe/stations/{id}/
+          → player structure: esi: GET /universe/structures/{id}/ + GET /universe/systems/{id}/
+          → if corp_assets not yet populated: leave unresolved (retry next cycle)
       → store: UPDATE sync_state (last_sync, cache_until from Expires header)
 ```
 

@@ -92,7 +92,7 @@ CREATE TABLE corp_assets (
 CREATE TABLE sync_state (
     owner_type  TEXT NOT NULL,
     owner_id    INTEGER NOT NULL,
-    endpoint    TEXT NOT NULL,      -- 'blueprints' | 'jobs'
+    endpoint    TEXT NOT NULL,      -- 'corp_assets' | 'blueprints' | 'jobs'
     last_sync   DATETIME NOT NULL,
     cache_until DATETIME NOT NULL,
     last_error  TEXT,               -- last sync error message; NULL when last sync succeeded
@@ -474,7 +474,7 @@ Returns the current sync state for all tracked subjects (characters and corporat
 | `owner_type` | string | `"character"` or `"corporation"` |
 | `owner_id` | integer | EVE character or corporation ID |
 | `owner_name` | string | Display name of the owner |
-| `endpoint` | string | `"blueprints"` or `"jobs"` |
+| `endpoint` | string | `"corp_assets"`, `"blueprints"`, or `"jobs"` |
 | `last_sync` | ISO 8601 datetime | When this subject/endpoint was last successfully synced |
 | `cache_until` | ISO 8601 datetime | ESI cache expiry — the sync worker will not re-fetch before this time |
 

@@ -35,9 +35,6 @@ const (
 
 // Client is the interface used by the sync and auth packages.
 // It allows substituting a mock ESI client in tests without a real network.
-//
-// Note: GetUniverseType is implemented in TASK-06 (universe.go).
-// The compile-time assertion var _ Client = (*httpClient)(nil) is added there.
 type Client interface {
 	GetCharacterBlueprints(ctx context.Context, characterID int64, token string) ([]Blueprint, time.Time, error)
 	GetCorporationBlueprints(ctx context.Context, corporationID int64, token string) ([]Blueprint, time.Time, error)

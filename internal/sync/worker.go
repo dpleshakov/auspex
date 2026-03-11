@@ -446,14 +446,8 @@ func (w *Worker) resolveCorpHangarLocation(ctx context.Context, itemID int64, no
 
 	asset, err := w.store.GetCorpAsset(ctx, itemID)
 	if err != nil {
-		// Corp assets not yet synced for this office item — store sentinel; will resolve next cycle.
-		if insertErr := w.store.InsertLocation(ctx, store.InsertLocationParams{
-			ID:         itemID,
-			Name:       corpHangarSentinel,
-			ResolvedAt: now,
-		}); insertErr != nil {
-			log.Printf("sync: inserting corp hangar sentinel %d: %v", itemID, insertErr)
-		}
+		// Corp assets not yet synced for this office item — skip and retry next cycle.
+		// Do not store a sentinel: it would be cached in eve_locations and block future resolution.
 		return
 	}
 
