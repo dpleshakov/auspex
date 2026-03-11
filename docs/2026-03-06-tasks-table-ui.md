@@ -45,6 +45,7 @@ Remove `isToday()` function — no longer needed.
 Rewrite `getFullStatusLabel()` and `getRowClass()` accordingly. The label "Overdue" is removed; `status = ready` is displayed as "Ready" regardless of date.
 
 **Definition of done:** working code + committed
+**Status:** ✅ Done
 
 ---
 

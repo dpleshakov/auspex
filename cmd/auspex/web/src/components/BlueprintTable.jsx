@@ -7,13 +7,13 @@ import {
 } from '@tanstack/react-table'
 import { getBlueprints } from '../api/client.js'
 
-// Full status label including 'Overdue' for ready + past end_date.
+const ALARM_HOURS = 24
+
+// Full status label for job status.
 function getFullStatusLabel(row) {
   const job = row.job
   if (!job) return 'Idle'
-  if (job.status === 'ready') {
-    return new Date(job.end_date) < new Date() ? 'Overdue' : 'Ready'
-  }
+  if (job.status === 'ready') return 'Ready'
   switch (job.activity) {
     case 'me_research': return 'ME Research'
     case 'te_research': return 'TE Research'
@@ -22,30 +22,24 @@ function getFullStatusLabel(row) {
   }
 }
 
-function isToday(isoStr) {
-  if (!isoStr) return false
-  const d = new Date(isoStr)
-  const now = new Date()
-  return d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-}
-
 // Returns extra CSS class for the table row based on job status.
 function getRowClass(row) {
-  const label = getFullStatusLabel(row)
-  if (label === 'Overdue') return 'bp-table__row--overdue'
-  if (row.job?.status === 'active' && isToday(row.job?.end_date)) return 'bp-table__row--completing-today'
+  const job = row.job
+  if (!job) return ''
+  if (job.status === 'ready') return 'bp-table__row--overdue'
+  if (job.status === 'active' && job.end_date) {
+    const msUntilEnd = new Date(job.end_date) - new Date()
+    if (msUntilEnd <= ALARM_HOURS * 60 * 60 * 1000) return 'bp-table__row--completing-today'
+  }
   return ''
 }
 
 // Numeric priority for default sort (lower = higher in table).
 function getStatusPriority(row) {
   switch (getFullStatusLabel(row)) {
-    case 'Overdue':     return 0
-    case 'Ready':       return 1
-    case 'Idle':        return 2
-    default:            return 3  // active variants
+    case 'Ready':  return 0
+    case 'Idle':   return 2
+    default:       return 3  // active variants
   }
 }
 
@@ -58,7 +52,7 @@ function formatLocalDate(isoStr) {
   })
 }
 
-const STATUS_OPTIONS = ['All', 'Overdue', 'Ready', 'Idle', 'ME Research', 'TE Research', 'Copying']
+const STATUS_OPTIONS = ['All', 'Ready', 'Idle', 'ME Research', 'TE Research', 'Copying']
 
 const DEFAULT_SORT = [{ id: 'status', desc: false }, { id: 'end_date', desc: false }]
 
