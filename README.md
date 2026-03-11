@@ -23,7 +23,6 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 ## Known Limitations
 
 - Location names show "Resolving…" until the first sync cycle completes. Player structures in which the character has no docking access will always show "Resolving…".
-- Corporation office locations show as "Corporation Hangar" — the exact station name requires an additional ESI call not yet implemented.
 - Free research slots count is always 0 (requires per-character skill data from ESI, not yet implemented).
 
 See [docs/tech-debt.md](docs/tech-debt.md) for the full list of known deferred decisions.
@@ -43,6 +42,7 @@ Go to [developers.eveonline.com](https://developers.eveonline.com/) and create a
 - **Connection Type:** Authentication & API Access
 - **Callback URL:** `http://localhost:8080/auth/eve/callback`
 - **Scopes:**
+  - `esi-assets.read_corporation_assets.v1`
   - `esi-characters.read_blueprints.v1`
   - `esi-corporations.read_blueprints.v1`
   - `esi-industry.read_character_jobs.v1`
