@@ -267,22 +267,6 @@ func (w *Worker) syncBlueprints(ctx context.Context, ownerType string, ownerID i
 		}
 	}
 
-	// For corp blueprints, resolve office item IDs to real station names via /offices/.
-	// Character blueprints do not use CorpSAG flags, so skip for ownerTypeCharacter.
-	if ownerType == ownerTypeCorporation {
-		seen := make(map[int64]bool)
-		var officeIDs []int64
-		for _, bp := range bps {
-			if corpHangarFlags[bp.LocationFlag] && !seen[bp.LocationID] {
-				seen[bp.LocationID] = true
-				officeIDs = append(officeIDs, bp.LocationID)
-			}
-		}
-		if len(officeIDs) > 0 {
-			w.resolveCorpOfficeLocations(ctx, ownerID, officeIDs, now)
-		}
-	}
-
 	return cacheUntil, nil
 }
 
@@ -332,119 +316,6 @@ func (w *Worker) syncCorpAssets(ctx context.Context, corpID int64) (time.Time, e
 	}
 
 	return cacheUntil, nil
-}
-
-// resolveCorpOfficeLocations resolves corp office item IDs to NPC station names
-// using GET /corporations/{id}/offices/ and POST /universe/names/.
-// On error (e.g. token lacks the required scope), falls back to corpHangarSentinel.
-func (w *Worker) resolveCorpOfficeLocations(ctx context.Context, corpID int64, officeItemIDs []int64, now time.Time) {
-	offices, err := w.esi.GetCorporationOffices(ctx, corpID, "")
-	if err != nil {
-		log.Printf("sync: corp %d: fetching offices: %v; storing sentinels for uncached IDs", corpID, err)
-		for _, id := range officeItemIDs {
-			// Bug 2 fix: don't overwrite a previously resolved real name.
-			if _, err := w.store.GetLocation(ctx, id); err == nil {
-				continue
-			}
-			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
-				ID:         id,
-				Name:       corpHangarSentinel,
-				ResolvedAt: now,
-			}); err != nil {
-				log.Printf("sync: inserting corp hangar sentinel %d: %v", id, err)
-			}
-		}
-		return
-	}
-
-	// Build office_item_id → station_id map.
-	officeToStation := make(map[int64]int64, len(offices))
-	for _, o := range offices {
-		officeToStation[o.OfficeID] = o.StationID
-	}
-
-	// Collect unique station IDs to resolve.
-	stationSet := make(map[int64]bool)
-	for _, id := range officeItemIDs {
-		if sid, ok := officeToStation[id]; ok {
-			stationSet[sid] = true
-		}
-	}
-	stationIDs := make([]int64, 0, len(stationSet))
-	for sid := range stationSet {
-		stationIDs = append(stationIDs, sid)
-	}
-
-	// Resolve NPC station names via universe/names.
-	stationNames := make(map[int64]string)
-	if len(stationIDs) > 0 {
-		if entries, err := w.esi.PostUniverseNames(ctx, stationIDs); err != nil {
-			log.Printf("sync: corp %d: resolving station names for offices: %v", corpID, err)
-		} else {
-			for _, e := range entries {
-				stationNames[e.ID] = e.Name
-			}
-		}
-	}
-
-	// Bug 1 fix: resolve citadel/structure IDs (>= 1T) that PostUniverseNames cannot handle.
-	// Fetch a token lazily — only if there are unresolved structure IDs.
-	token := ""
-	for sid := range stationSet {
-		if sid < 1_000_000_000_000 {
-			continue
-		}
-		if _, ok := stationNames[sid]; ok {
-			continue
-		}
-		if token == "" {
-			token = w.anyCharacterToken(ctx)
-			if token == "" {
-				log.Printf("sync: corp %d: no character token available for structure resolution", corpID)
-				break
-			}
-		}
-		structure, err := w.esi.GetUniverseStructure(ctx, sid, token)
-		if errors.Is(err, esi.ErrForbidden) {
-			log.Printf("sync: corp %d: structure %d: access denied, skipping", corpID, sid)
-			continue
-		}
-		if err != nil {
-			log.Printf("sync: corp %d: fetching structure %d: %v", corpID, sid, err)
-			continue
-		}
-		systemName, err := w.getSystemName(ctx, structure.SolarSystemID)
-		if err != nil {
-			log.Printf("sync: corp %d: fetching system %d for structure %d: %v", corpID, structure.SolarSystemID, sid, err)
-			continue
-		}
-		stationNames[sid] = systemName + " \u2014 " + structure.Name
-	}
-
-	// Insert location for each office item ID.
-	for _, id := range officeItemIDs {
-		name := corpHangarSentinel
-		if sid, ok := officeToStation[id]; ok {
-			if n, ok := stationNames[sid]; ok {
-				name = n
-			}
-		} else {
-			log.Printf("sync: corp %d: office item %d not found in /offices/ response", corpID, id)
-		}
-		// Bug 3 fix: don't overwrite a cached real name with sentinel.
-		if name == corpHangarSentinel {
-			if _, err := w.store.GetLocation(ctx, id); err == nil {
-				continue
-			}
-		}
-		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
-			ID:         id,
-			Name:       name,
-			ResolvedAt: now,
-		}); err != nil {
-			log.Printf("sync: inserting office location %d: %v", id, err)
-		}
-	}
 }
 
 // resolveTypeIDsList ensures that every type_id in the provided slice has a
@@ -503,10 +374,6 @@ const (
 	npcStationMin = int64(60_000_000)
 	npcStationMax = int64(64_000_000)
 
-	// npcStationThreshold separates sub-trillion IDs from player structure IDs.
-	// IDs at or above this value are player-owned structures.
-	npcStationThreshold = int64(1_000_000_000_000)
-
 	// corpHangarSentinel is the display name stored for corporation office/hangar
 	// item IDs (range [64_000_000, 1_000_000_000_000)) that cannot be resolved
 	// via /universe/names/ and have no dedicated ESI lookup.
@@ -525,133 +392,176 @@ var corpHangarFlags = map[string]bool{
 // resolveLocationIDs resolves location_ids for all blueprints owned by ownerType/ownerID
 // and populates eve_locations with human-readable names.
 //
-// NPC stations (id < 1_000_000_000_000) are resolved in bulk via POST /universe/names/.
-// Player structures (id >= 1_000_000_000_000) are resolved individually via
-// GET /universe/structures/{id}/, paired with a system name lookup.
+// For corp blueprint flags (CorpSAG*, CorpDeliveries) the location_id is an office item ID;
+// the real station/structure is looked up in corp_assets. If the asset is not yet synced,
+// the sentinel "Corporation Hangar" is stored and will be replaced on the next cycle.
+//
+// For direct location_id entries ("Hangar" flag, character blueprints):
+// NPC stations (60 000 000–64 000 000) are resolved via GetStation;
+// player structures (all other IDs) via GetUniverseStructure.
 // Already-cached IDs are skipped. 403 responses for structures are not cached.
 func (w *Worker) resolveLocationIDs(ctx context.Context, ownerType string, ownerID int64) {
-	locationIDs, err := w.store.ListBlueprintLocationIDsByOwner(ctx, store.ListBlueprintLocationIDsByOwnerParams{
+	rows, err := w.store.ListBlueprintLocationsByOwner(ctx, store.ListBlueprintLocationsByOwnerParams{
 		OwnerType: ownerType,
 		OwnerID:   ownerID,
 	})
 	if err != nil {
-		log.Printf("sync: listing blueprint location_ids for %s %d: %v", ownerType, ownerID, err)
+		log.Printf("sync: listing blueprint locations for %s %d: %v", ownerType, ownerID, err)
 		return
 	}
 
-	var npcToResolve []int64
-	var corpHangarIDs []int64
-	var structureToResolve []int64
+	// Lazily fetch a character token only when needed for structure lookups.
+	var token string
+	getToken := func() string {
+		if token == "" {
+			token = w.anyCharacterToken(ctx)
+		}
+		return token
+	}
 
-	for _, id := range locationIDs {
+	now := w.now()
+	for _, row := range rows {
 		if ctx.Err() != nil {
 			return
 		}
-		if _, err := w.store.GetLocation(ctx, id); err == nil {
+		if corpHangarFlags[row.LocationFlag] {
+			w.resolveCorpHangarLocation(ctx, row.LocationID, now, getToken)
+			continue
+		}
+		// Direct location_id ("Hangar" or other flag with a real station/structure ID).
+		if _, err := w.store.GetLocation(ctx, row.LocationID); err == nil {
 			continue // already cached
 		}
-		switch {
-		case id >= npcStationMin && id < npcStationMax:
-			npcToResolve = append(npcToResolve, id)
-		case id < npcStationThreshold:
-			// Corporation office/hangar item IDs — not resolvable via /universe/names/.
-			corpHangarIDs = append(corpHangarIDs, id)
-		default:
-			structureToResolve = append(structureToResolve, id)
-		}
+		w.resolveDirectLocation(ctx, row.LocationID, now, getToken)
+	}
+}
+
+// resolveCorpHangarLocation resolves a corp blueprint office item ID to a human-readable name.
+// It looks up the real station/structure ID from corp_assets, then fetches the name.
+// If the asset is not found (not yet synced), stores corpHangarSentinel.
+func (w *Worker) resolveCorpHangarLocation(ctx context.Context, itemID int64, now time.Time, getToken func() string) {
+	if _, err := w.store.GetLocation(ctx, itemID); err == nil {
+		return // already cached
 	}
 
-	// Store sentinel name for corporation office/hangar IDs.
-	if len(corpHangarIDs) > 0 {
-		now := w.now()
-		for _, id := range corpHangarIDs {
-			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
-				ID:         id,
+	asset, err := w.store.GetCorpAsset(ctx, itemID)
+	if err != nil {
+		// Corp assets not yet synced for this office item — store sentinel; will resolve next cycle.
+		if insertErr := w.store.InsertLocation(ctx, store.InsertLocationParams{
+			ID:         itemID,
+			Name:       corpHangarSentinel,
+			ResolvedAt: now,
+		}); insertErr != nil {
+			log.Printf("sync: inserting corp hangar sentinel %d: %v", itemID, insertErr)
+		}
+		return
+	}
+
+	realID := asset.LocationID
+	var name string
+	switch {
+	case realID >= npcStationMin && realID < npcStationMax:
+		n, err := w.esi.GetStation(ctx, realID)
+		if err != nil {
+			log.Printf("sync: resolving NPC station %d for corp hangar %d: %v", realID, itemID, err)
+			return
+		}
+		name = n
+	default: // player structure
+		tok := getToken()
+		if tok == "" {
+			log.Printf("sync: no character token for structure %d (corp hangar %d)", realID, itemID)
+			return
+		}
+		structure, err := w.esi.GetUniverseStructure(ctx, realID, tok)
+		if errors.Is(err, esi.ErrForbidden) {
+			log.Printf("sync: structure %d: access denied, skipping cache", realID)
+			return
+		}
+		if errors.Is(err, esi.ErrNotFound) {
+			log.Printf("sync: structure %d: not found in ESI, storing sentinel", realID)
+			_ = w.store.InsertLocation(ctx, store.InsertLocationParams{
+				ID:         itemID,
 				Name:       corpHangarSentinel,
 				ResolvedAt: now,
-			}); err != nil {
-				log.Printf("sync: inserting corp hangar location %d: %v", id, err)
-			}
+			})
+			return
 		}
-	}
-
-	// Bulk-resolve NPC stations.
-	if len(npcToResolve) > 0 {
-		entries, err := w.esi.PostUniverseNames(ctx, npcToResolve)
 		if err != nil {
-			log.Printf("sync: PostUniverseNames for %s %d: %v", ownerType, ownerID, err)
-		} else {
-			if len(entries) < len(npcToResolve) {
-				returned := make(map[int64]bool, len(entries))
-				for _, e := range entries {
-					returned[e.ID] = true
-				}
-				var missing []int64
-				for _, id := range npcToResolve {
-					if !returned[id] {
-						missing = append(missing, id)
-					}
-				}
-				log.Printf("sync: PostUniverseNames returned %d of %d entries for %s %d; missing IDs: %v",
-					len(entries), len(npcToResolve), ownerType, ownerID, missing)
-			}
-			now := w.now()
-			for _, e := range entries {
-				if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
-					ID:         e.ID,
-					Name:       e.Name,
-					ResolvedAt: now,
-				}); err != nil {
-					log.Printf("sync: inserting location %d: %v", e.ID, err)
-				}
-			}
+			log.Printf("sync: fetching structure %d for corp hangar %d: %v", realID, itemID, err)
+			return
 		}
+		sysName, err := w.getSystemName(ctx, structure.SolarSystemID)
+		if err != nil {
+			log.Printf("sync: fetching system %d for structure %d: %v", structure.SolarSystemID, realID, err)
+			return
+		}
+		name = sysName + " \u2014 " + structure.Name
 	}
 
-	// Resolve player structures one by one.
-	if len(structureToResolve) > 0 {
-		token := w.anyCharacterToken(ctx)
-		if token == "" {
+	if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+		ID:         itemID,
+		Name:       name,
+		ResolvedAt: now,
+	}); err != nil {
+		log.Printf("sync: inserting corp hangar location %d: %v", itemID, err)
+	}
+}
+
+// resolveDirectLocation resolves a direct station or structure ID to a human-readable name.
+// NPC stations (60 000 000–64 000 000) are fetched via GetStation.
+// All other IDs are treated as player structures and fetched via GetUniverseStructure.
+func (w *Worker) resolveDirectLocation(ctx context.Context, id int64, now time.Time, getToken func() string) {
+	switch {
+	case id >= npcStationMin && id < npcStationMax:
+		name, err := w.esi.GetStation(ctx, id)
+		if err != nil {
+			log.Printf("sync: resolving NPC station %d: %v", id, err)
+			return
+		}
+		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+			ID:         id,
+			Name:       name,
+			ResolvedAt: now,
+		}); err != nil {
+			log.Printf("sync: inserting location %d: %v", id, err)
+		}
+	default: // player structure
+		tok := getToken()
+		if tok == "" {
 			log.Printf("sync: no character token available for structure resolution")
 			return
 		}
-		for _, id := range structureToResolve {
-			if ctx.Err() != nil {
-				return
-			}
-			structure, err := w.esi.GetUniverseStructure(ctx, id, token)
-			if errors.Is(err, esi.ErrForbidden) {
-				log.Printf("sync: structure %d: access denied, skipping cache", id)
-				continue
-			}
-			if errors.Is(err, esi.ErrNotFound) {
-				log.Printf("sync: structure %d: not found in ESI, storing sentinel", id)
-				_ = w.store.InsertLocation(ctx, store.InsertLocationParams{
-					ID:         id,
-					Name:       corpHangarSentinel,
-					ResolvedAt: w.now(),
-				})
-				continue
-			}
-			if err != nil {
-				log.Printf("sync: fetching structure %d: %v", id, err)
-				continue
-			}
-
-			systemName, err := w.getSystemName(ctx, structure.SolarSystemID)
-			if err != nil {
-				log.Printf("sync: fetching system %d for structure %d: %v", structure.SolarSystemID, id, err)
-				continue
-			}
-
-			displayName := systemName + " \u2014 " + structure.Name
-			if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+		structure, err := w.esi.GetUniverseStructure(ctx, id, tok)
+		if errors.Is(err, esi.ErrForbidden) {
+			log.Printf("sync: structure %d: access denied, skipping cache", id)
+			return
+		}
+		if errors.Is(err, esi.ErrNotFound) {
+			log.Printf("sync: structure %d: not found in ESI, storing sentinel", id)
+			_ = w.store.InsertLocation(ctx, store.InsertLocationParams{
 				ID:         id,
-				Name:       displayName,
-				ResolvedAt: w.now(),
-			}); err != nil {
-				log.Printf("sync: inserting structure location %d: %v", id, err)
-			}
+				Name:       corpHangarSentinel,
+				ResolvedAt: now,
+			})
+			return
+		}
+		if err != nil {
+			log.Printf("sync: fetching structure %d: %v", id, err)
+			return
+		}
+		sysName, err := w.getSystemName(ctx, structure.SolarSystemID)
+		if err != nil {
+			log.Printf("sync: fetching system %d for structure %d: %v", structure.SolarSystemID, id, err)
+			return
+		}
+		name := sysName + " \u2014 " + structure.Name
+		if err := w.store.InsertLocation(ctx, store.InsertLocationParams{
+			ID:         id,
+			Name:       name,
+			ResolvedAt: now,
+		}); err != nil {
+			log.Printf("sync: inserting structure location %d: %v", id, err)
 		}
 	}
 }

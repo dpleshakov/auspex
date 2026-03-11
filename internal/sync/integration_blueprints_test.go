@@ -17,7 +17,7 @@ func charBlueprintRoutes() map[string]string {
 		"/latest/universe/types/5001":            "universe_type_5001.json",
 		"/latest/universe/groups/260":            "universe_group_260.json",
 		"/latest/universe/categories/26":         "universe_category_26.json",
-		"/latest/universe/names/":                "universe_names_npc_station.json",
+		"/latest/universe/stations/60003760/":    "universe_station_60003760.json",
 	}
 }
 
@@ -159,7 +159,7 @@ func TestSyncIntegration_CorporationBlueprints_RowsMatchFixture(t *testing.T) {
 		"/latest/universe/groups/260":              "universe_group_260.json",
 		"/latest/universe/categories/26":           "universe_category_26.json",
 		"/latest/corporations/99000001/assets/":    "corporation_assets_officefolders.json",
-		"/latest/universe/stations/60015146":       "universe_station_60015146.json",
+		"/latest/universe/stations/60015146/":      "universe_station_60015146.json",
 	})
 	w := newIntegrationWorker(t, sqlDB, srv.URL)
 	ctx := context.Background()

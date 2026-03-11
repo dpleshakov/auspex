@@ -13,15 +13,15 @@ import (
 // mockESIClient implements esi.Client for syncSubject tests.
 // Methods not relevant to a specific test panic if called.
 type mockESIClient struct {
-	charBlueprintsFunc        func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	corpBlueprintsFunc        func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
-	charJobsFunc              func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	corpJobsFunc              func(context.Context, int64, string) ([]esi.Job, time.Time, error)
-	getUniverseTypeFunc       func(context.Context, int64) (esi.UniverseType, error)
-	postUniverseNamesFunc     func(context.Context, []int64) ([]esi.UniverseNamesEntry, error)
-	getUniverseStructFunc     func(context.Context, int64, string) (esi.UniverseStructure, error)
-	getUniverseSystemFunc     func(context.Context, int64) (string, error)
-	getCorporationOfficesFunc func(context.Context, int64, string) ([]esi.CorporationOffice, error)
+	charBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	corpBlueprintsFunc    func(context.Context, int64, string) ([]esi.Blueprint, time.Time, error)
+	charJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	corpJobsFunc          func(context.Context, int64, string) ([]esi.Job, time.Time, error)
+	getUniverseTypeFunc   func(context.Context, int64) (esi.UniverseType, error)
+	postUniverseNamesFunc func(context.Context, []int64) ([]esi.UniverseNamesEntry, error)
+	getUniverseStructFunc func(context.Context, int64, string) (esi.UniverseStructure, error)
+	getUniverseSystemFunc func(context.Context, int64) (string, error)
+	getStationFunc        func(context.Context, int64) (string, error)
 }
 
 func (m *mockESIClient) GetCharacterBlueprints(ctx context.Context, id int64, token string) ([]esi.Blueprint, time.Time, error) {
@@ -84,14 +84,10 @@ func (m *mockESIClient) GetCorporationAssets(_ context.Context, _ int64, _ strin
 	panic("unexpected call to GetCorporationAssets")
 }
 
-func (m *mockESIClient) GetCorporationOffices(ctx context.Context, id int64, token string) ([]esi.CorporationOffice, error) {
-	if m.getCorporationOfficesFunc != nil {
-		return m.getCorporationOfficesFunc(ctx, id, token)
+func (m *mockESIClient) GetStation(ctx context.Context, id int64) (string, error) {
+	if m.getStationFunc != nil {
+		return m.getStationFunc(ctx, id)
 	}
-	panic("unexpected call to GetCorporationOffices")
-}
-
-func (m *mockESIClient) GetStation(_ context.Context, _ int64) (string, error) {
 	panic("unexpected call to GetStation")
 }
 
@@ -227,236 +223,6 @@ func TestSyncBlueprints_UpsertError_ContinuesOtherBlueprints(t *testing.T) {
 	}
 	if !syncStateUpdated {
 		t.Error("sync_state must be updated even when some blueprint upserts are skipped")
-	}
-}
-
-// --- TestSyncBlueprints_CorpHangarFlag_ResolvesStationName ---
-// Verifies that corp blueprints with a CorpSAG location_flag cause the office item ID
-// to be resolved to a real station name via GetCorporationOffices + PostUniverseNames.
-func TestSyncBlueprints_CorpHangarFlag_ResolvesStationName(t *testing.T) {
-	const corpID int64 = 99
-	const officeItemID int64 = 1_052_718_829_566
-	const stationID int64 = 60004588
-	const stationName = "Ibura IX - Moon 11 - Spacelane Patrol Testing Facilities"
-
-	var insertedLocations []store.InsertLocationParams
-
-	q := &mockQuerier{
-		getEveTypeFunc: func(id int64) (store.EveType, error) {
-			return store.EveType{ID: id}, nil
-		},
-		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
-		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{
-		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
-			return []esi.Blueprint{
-				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
-			}, time.Now().Add(time.Minute), nil
-		},
-		getCorporationOfficesFunc: func(_ context.Context, id int64, _ string) ([]esi.CorporationOffice, error) {
-			if id != corpID {
-				t.Errorf("GetCorporationOffices: unexpected corpID %d", id)
-			}
-			return []esi.CorporationOffice{
-				{OfficeID: officeItemID, StationID: stationID},
-			}, nil
-		},
-		postUniverseNamesFunc: func(_ context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
-			if len(ids) != 1 || ids[0] != stationID {
-				t.Errorf("PostUniverseNames: unexpected ids %v", ids)
-			}
-			return []esi.UniverseNamesEntry{
-				{ID: stationID, Name: stationName},
-			}, nil
-		},
-	}
-
-	w := New(q, esiMock, time.Minute)
-	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
-
-	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
-	}
-	if insertedLocations[0].ID != officeItemID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
-	}
-	if insertedLocations[0].Name != stationName {
-		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, stationName)
-	}
-}
-
-// --- TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError ---
-// Verifies that when GetCorporationOffices returns an error (e.g. missing scope),
-// InsertLocation is called with corpHangarSentinel as a fallback.
-func TestSyncBlueprints_CorpHangarFlag_FallsBackToSentinelOnOfficesError(t *testing.T) {
-	const corpID int64 = 99
-	const officeItemID int64 = 1_052_718_829_566
-
-	var insertedLocations []store.InsertLocationParams
-
-	q := &mockQuerier{
-		getEveTypeFunc: func(id int64) (store.EveType, error) {
-			return store.EveType{ID: id}, nil
-		},
-		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
-		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
-		getLocationFunc: func(_ int64) (store.EveLocation, error) {
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{
-		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
-			return []esi.Blueprint{
-				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
-			}, time.Now().Add(time.Minute), nil
-		},
-		getCorporationOfficesFunc: func(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
-			return nil, errors.New("ESI status 403: Forbidden")
-		},
-	}
-
-	w := New(q, esiMock, time.Minute)
-	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
-
-	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call for fallback sentinel, got %d", len(insertedLocations))
-	}
-	if insertedLocations[0].ID != officeItemID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
-	}
-	if insertedLocations[0].Name != corpHangarSentinel {
-		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
-	}
-}
-
-// --- TestSyncBlueprints_CorpHangarFlag_CitadelOffice_ResolvesViaStructure ---
-// Verifies that when /offices/ returns a structure ID (>= 1T) as station_id,
-// the office item ID is resolved via GetUniverseStructure to "System — StructureName".
-func TestSyncBlueprints_CorpHangarFlag_CitadelOffice_ResolvesViaStructure(t *testing.T) {
-	const corpID int64 = 99
-	const officeItemID int64 = 1_052_718_829_566
-	const structureID int64 = 1_000_000_000_001
-	const systemID int64 = 30000142
-	const wantName = "Jita \u2014 Keepstar"
-
-	var insertedLocations []store.InsertLocationParams
-
-	q := &mockQuerier{
-		getEveTypeFunc: func(id int64) (store.EveType, error) {
-			return store.EveType{ID: id}, nil
-		},
-		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
-		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
-		listCharsFunc: func() ([]store.Character, error) {
-			return []store.Character{{ID: 1, AccessToken: "tok"}}, nil
-		},
-		getLocationFunc: func(id int64) (store.EveLocation, error) {
-			if id == systemID {
-				return store.EveLocation{ID: id, Name: "Jita"}, nil
-			}
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{
-		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
-			return []esi.Blueprint{
-				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
-			}, time.Now().Add(time.Minute), nil
-		},
-		getCorporationOfficesFunc: func(_ context.Context, id int64, _ string) ([]esi.CorporationOffice, error) {
-			if id != corpID {
-				t.Errorf("GetCorporationOffices: unexpected corpID %d", id)
-			}
-			return []esi.CorporationOffice{
-				{OfficeID: officeItemID, StationID: structureID},
-			}, nil
-		},
-		postUniverseNamesFunc: func(_ context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
-			// structureID is not resolvable via universe/names — return empty.
-			return nil, nil
-		},
-		getUniverseStructFunc: func(_ context.Context, id int64, _ string) (esi.UniverseStructure, error) {
-			if id != structureID {
-				t.Errorf("GetUniverseStructure: unexpected id %d", id)
-			}
-			return esi.UniverseStructure{Name: "Keepstar", SolarSystemID: systemID}, nil
-		},
-	}
-
-	w := New(q, esiMock, time.Minute)
-	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
-
-	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
-	}
-	if insertedLocations[0].ID != officeItemID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
-	}
-	if insertedLocations[0].Name != wantName {
-		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, wantName)
-	}
-}
-
-// --- TestSyncBlueprints_CorpHangarFlag_ErrorPathPreservesCachedName ---
-// Verifies that when GetCorporationOffices fails and the office item ID already
-// has a cached real name, InsertLocation is NOT called (cached name is preserved).
-func TestSyncBlueprints_CorpHangarFlag_ErrorPathPreservesCachedName(t *testing.T) {
-	const corpID int64 = 99
-	const officeItemID int64 = 1_052_718_829_566
-	const cachedName = "Jita IV - Moon 4 - Caldari Navy Assembly Plant"
-
-	insertLocationCalled := false
-
-	q := &mockQuerier{
-		getEveTypeFunc: func(id int64) (store.EveType, error) {
-			return store.EveType{ID: id}, nil
-		},
-		upsertBlueprintFunc: func(_ store.UpsertBlueprintParams) error { return nil },
-		upsertSyncStateFunc: func(_ store.UpsertSyncStateParams) error { return nil },
-		getLocationFunc: func(id int64) (store.EveLocation, error) {
-			if id == officeItemID {
-				return store.EveLocation{ID: id, Name: cachedName}, nil
-			}
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(_ store.InsertLocationParams) error {
-			insertLocationCalled = true
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{
-		corpBlueprintsFunc: func(_ context.Context, _ int64, _ string) ([]esi.Blueprint, time.Time, error) {
-			return []esi.Blueprint{
-				{ItemID: 1001, TypeID: 500, LocationID: officeItemID, LocationFlag: "CorpSAG1", MELevel: 10, TELevel: 20},
-			}, time.Now().Add(time.Minute), nil
-		},
-		getCorporationOfficesFunc: func(_ context.Context, _ int64, _ string) ([]esi.CorporationOffice, error) {
-			return nil, errors.New("ESI status 503: Service Unavailable")
-		},
-	}
-
-	w := New(q, esiMock, time.Minute)
-	w.syncSubject(context.Background(), ownerTypeCorporation, corpID, endpointBlueprints)
-
-	if insertLocationCalled {
-		t.Error("InsertLocation must NOT be called when a cached real name exists")
 	}
 }
 

@@ -37,6 +37,8 @@ type mockQuerier struct {
 
 	// location resolution
 	listBlueprintLocationIDsByOwnerFunc func(store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error)
+	listBlueprintLocationsByOwnerFunc   func(store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error)
+	getCorpAssetFunc                    func(int64) (store.GetCorpAssetRow, error)
 	getLocationFunc                     func(int64) (store.EveLocation, error)
 	insertLocationFunc                  func(store.InsertLocationParams) error
 }
@@ -214,11 +216,17 @@ func (m *mockQuerier) DeleteCorpAssetsByOwner(_ context.Context, _ int64) error 
 	return nil
 }
 
-func (m *mockQuerier) GetCorpAsset(_ context.Context, _ int64) (store.GetCorpAssetRow, error) {
+func (m *mockQuerier) GetCorpAsset(_ context.Context, itemID int64) (store.GetCorpAssetRow, error) {
+	if m.getCorpAssetFunc != nil {
+		return m.getCorpAssetFunc(itemID)
+	}
 	return store.GetCorpAssetRow{}, nil
 }
 
 func (m *mockQuerier) ListBlueprintLocationsByOwner(_ context.Context, arg store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+	if m.listBlueprintLocationsByOwnerFunc != nil {
+		return m.listBlueprintLocationsByOwnerFunc(arg)
+	}
 	// Default: empty list — resolveLocationIDs becomes a no-op, existing tests unaffected.
 	return nil, nil
 }
