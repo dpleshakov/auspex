@@ -44,11 +44,6 @@ export default function SummaryBar({ summary: externalSummary }) {
   return (
     <div className="summary-bar">
       <SummaryItem
-        label="Idle BPOs"
-        value={summary.idle_blueprints}
-        modifier={summary.idle_blueprints > 0 ? 'warn' : null}
-      />
-      <SummaryItem
         label="Ready Jobs"
         value={summary.ready_jobs}
         modifier={summary.ready_jobs > 0 ? 'danger' : null}
@@ -56,6 +51,10 @@ export default function SummaryBar({ summary: externalSummary }) {
       <SummaryItem
         label="Free Research Slots"
         value={summary.free_research_slots}
+      />
+      <SummaryItem
+        label="Idle BPOs"
+        value={summary.idle_blueprints}
       />
     </div>
   )
