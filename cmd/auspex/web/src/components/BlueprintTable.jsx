@@ -43,12 +43,13 @@ function getStatusPriority(row) {
   }
 }
 
-// Formats an ISO date string as local date + time (short).
+// Formats an ISO date string as local date + time (short), always in 24-hour format.
 function formatLocalDate(isoStr) {
   if (!isoStr) return '—'
   return new Date(isoStr).toLocaleString(undefined, {
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
+    hour12: false,
   })
 }
 
