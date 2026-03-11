@@ -163,7 +163,7 @@ After this task `go test ./...` passes, including the TASK-01 integration test.
 - Code: error handling in paginated assets fetch; correct fallback when `corp_assets` not yet synced; no duplicate location cache writes
 - Security: no tokens logged, no internal error details exposed in API responses, dependency vulnerability check (`go mod tidy`, `golangci-lint`, `npm audit`)
 - Documentation: verify `technical-reference.md` matches what was actually built — update if not; verify `architecture.md` — update if module responsibilities changed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 
