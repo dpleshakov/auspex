@@ -152,7 +152,7 @@ delete all dead code, and make the TASK-01 test go green.
 
 After this task `go test ./...` passes, including the TASK-01 integration test.
 **Definition of done:** working code + tests + committed; `go test ./...` green
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

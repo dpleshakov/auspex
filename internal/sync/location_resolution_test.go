@@ -1,12 +1,8 @@
 package sync
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"log"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -14,18 +10,19 @@ import (
 	"github.com/dpleshakov/auspex/internal/store"
 )
 
-// --- TestResolveLocationIDs_NPCOnly_BulkResolves ---
-// Verifies that NPC station IDs (< 1T) are resolved via PostUniverseNames
-// and inserted into eve_locations.
-func TestResolveLocationIDs_NPCOnly_BulkResolves(t *testing.T) {
+// --- TestResolveLocationIDs_NPCStation_Hangar_ResolvesViaGetStation ---
+// Verifies that NPC station IDs with "Hangar" flag are resolved via GetStation.
+func TestResolveLocationIDs_NPCStation_Hangar_ResolvesViaGetStation(t *testing.T) {
 	const stationID int64 = 60003760
 
 	var insertedLocations []store.InsertLocationParams
-	var postNamesCalledWith []int64
+	stationCalled := false
 
 	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{stationID}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: stationID, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			return store.EveLocation{}, errors.New("not found")
@@ -37,19 +34,20 @@ func TestResolveLocationIDs_NPCOnly_BulkResolves(t *testing.T) {
 	}
 
 	esiMock := &mockESIClient{
-		postUniverseNamesFunc: func(_ context.Context, ids []int64) ([]esi.UniverseNamesEntry, error) {
-			postNamesCalledWith = ids
-			return []esi.UniverseNamesEntry{
-				{ID: stationID, Name: "Jita IV - Moon 4 - Caldari Navy Assembly Plant", Category: "station"},
-			}, nil
+		getStationFunc: func(_ context.Context, id int64) (string, error) {
+			stationCalled = true
+			if id != stationID {
+				t.Errorf("GetStation: unexpected id %d", id)
+			}
+			return "Jita IV - Moon 4 - Caldari Navy Assembly Plant", nil
 		},
 	}
 
 	w := New(q, esiMock, time.Minute)
 	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
 
-	if len(postNamesCalledWith) != 1 || postNamesCalledWith[0] != stationID {
-		t.Errorf("PostUniverseNames called with %v, want [%d]", postNamesCalledWith, stationID)
+	if !stationCalled {
+		t.Error("GetStation must be called for NPC station with Hangar flag")
 	}
 	if len(insertedLocations) != 1 {
 		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
@@ -65,11 +63,13 @@ func TestResolveLocationIDs_NPCOnly_BulkResolves(t *testing.T) {
 // --- TestResolveLocationIDs_SkipsAlreadyCached ---
 // Verifies that location IDs already in eve_locations are not re-fetched.
 func TestResolveLocationIDs_SkipsAlreadyCached(t *testing.T) {
-	postNamesCalled := false
+	stationCalled := false
 
 	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{60003760}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: 60003760, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			// Already cached.
@@ -78,17 +78,17 @@ func TestResolveLocationIDs_SkipsAlreadyCached(t *testing.T) {
 	}
 
 	esiMock := &mockESIClient{
-		postUniverseNamesFunc: func(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
-			postNamesCalled = true
-			return nil, nil
+		getStationFunc: func(_ context.Context, _ int64) (string, error) {
+			stationCalled = true
+			return "", nil
 		},
 	}
 
 	w := New(q, esiMock, time.Minute)
 	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
 
-	if postNamesCalled {
-		t.Error("PostUniverseNames must not be called when all locations are already cached")
+	if stationCalled {
+		t.Error("GetStation must not be called when location is already cached")
 	}
 }
 
@@ -96,7 +96,7 @@ func TestResolveLocationIDs_SkipsAlreadyCached(t *testing.T) {
 // Verifies that no ESI calls are made when there are no location IDs.
 func TestResolveLocationIDs_NoIDs_NoESICalls(t *testing.T) {
 	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
 			return nil, nil
 		},
 	}
@@ -110,8 +110,8 @@ func TestResolveLocationIDs_NoIDs_NoESICalls(t *testing.T) {
 }
 
 // --- TestResolveLocationIDs_Structure_ResolvedWithSystemName ---
-// Verifies that structure IDs (>= 1T) are resolved via GetUniverseStructure +
-// GetUniverseSystem, and stored as "SystemName — StructureName".
+// Verifies that structure IDs (>= 1T) with "Hangar" flag are resolved via
+// GetUniverseStructure + GetUniverseSystem, stored as "SystemName — StructureName".
 func TestResolveLocationIDs_Structure_ResolvedWithSystemName(t *testing.T) {
 	const structureID int64 = 1_000_000_000_001
 	const systemID int64 = 30000142
@@ -122,8 +122,10 @@ func TestResolveLocationIDs_Structure_ResolvedWithSystemName(t *testing.T) {
 		listCharsFunc: func() ([]store.Character, error) {
 			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok123"}}, nil
 		},
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{structureID}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: structureID, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			return store.EveLocation{}, errors.New("not found")
@@ -189,8 +191,10 @@ func TestResolveLocationIDs_Structure_403_Skipped(t *testing.T) {
 		listCharsFunc: func() ([]store.Character, error) {
 			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
 		},
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{structureID}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: structureID, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			return store.EveLocation{}, errors.New("not found")
@@ -215,121 +219,10 @@ func TestResolveLocationIDs_Structure_403_Skipped(t *testing.T) {
 	}
 }
 
-// --- TestResolveLocationIDs_CorpOffice_NotSentToPostNames ---
-// Verifies that corporation office/hangar IDs ([64M, 1T)) are NOT sent to PostUniverseNames.
-func TestResolveLocationIDs_CorpOffice_NotSentToPostNames(t *testing.T) {
-	const officeID int64 = 100_000_000 // corp hangar range
-
-	postNamesCalled := false
-	var insertedLocations []store.InsertLocationParams
-
-	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{officeID}, nil
-		},
-		getLocationFunc: func(id int64) (store.EveLocation, error) {
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{
-		postUniverseNamesFunc: func(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
-			postNamesCalled = true
-			return nil, nil
-		},
-	}
-
-	w := New(q, esiMock, time.Minute)
-	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
-
-	if postNamesCalled {
-		t.Error("PostUniverseNames must not be called for corporation office/hangar IDs")
-	}
-}
-
-// --- TestResolveLocationIDs_CorpOffice_StoresSentinel ---
-// Verifies that corporation office/hangar IDs get the sentinel "Corporation Hangar" stored.
-func TestResolveLocationIDs_CorpOffice_StoresSentinel(t *testing.T) {
-	const officeID int64 = 200_000_000 // corp hangar range
-
-	var insertedLocations []store.InsertLocationParams
-
-	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{officeID}, nil
-		},
-		getLocationFunc: func(id int64) (store.EveLocation, error) {
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(arg store.InsertLocationParams) error {
-			insertedLocations = append(insertedLocations, arg)
-			return nil
-		},
-	}
-
-	esiMock := &mockESIClient{}
-
-	w := New(q, esiMock, time.Minute)
-	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
-
-	if len(insertedLocations) != 1 {
-		t.Fatalf("expected 1 InsertLocation call for corp hangar, got %d", len(insertedLocations))
-	}
-	if insertedLocations[0].ID != officeID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeID)
-	}
-	if insertedLocations[0].Name != corpHangarSentinel {
-		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
-	}
-}
-
-// --- TestResolveLocationIDs_PostNames_LogsWarningOnPartialResponse ---
-// Verifies that a warning is logged when PostUniverseNames returns fewer entries than requested.
-func TestResolveLocationIDs_PostNames_LogsWarningOnPartialResponse(t *testing.T) {
-	const stationA int64 = 60003760
-	const stationB int64 = 60000004
-
-	q := &mockQuerier{
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{stationA, stationB}, nil
-		},
-		getLocationFunc: func(id int64) (store.EveLocation, error) {
-			return store.EveLocation{}, errors.New("not found")
-		},
-		insertLocationFunc: func(_ store.InsertLocationParams) error { return nil },
-	}
-
-	esiMock := &mockESIClient{
-		// ESI only returns one of the two requested IDs.
-		postUniverseNamesFunc: func(_ context.Context, _ []int64) ([]esi.UniverseNamesEntry, error) {
-			return []esi.UniverseNamesEntry{
-				{ID: stationA, Name: "Jita IV - Moon 4 - Caldari Navy Assembly Plant", Category: "station"},
-			}, nil
-		},
-	}
-
-	var logBuf bytes.Buffer
-	log.SetOutput(&logBuf)
-	defer log.SetOutput(os.Stderr)
-
-	w := New(q, esiMock, time.Minute)
-	w.resolveLocationIDs(context.Background(), ownerTypeCharacter, 1)
-
-	logged := logBuf.String()
-	if !strings.Contains(logged, "missing IDs") {
-		t.Errorf("expected warning about missing IDs in log, got: %q", logged)
-	}
-}
-
 // --- TestResolveLocationIDs_Structure_404_StoresSentinel ---
-// Verifies that a 404 from GetUniverseStructure (corp office item ID >= 1T)
-// stores the sentinel name rather than leaving the location unresolved.
+// Verifies that a 404 from GetUniverseStructure stores the sentinel name.
 func TestResolveLocationIDs_Structure_404_StoresSentinel(t *testing.T) {
-	const officeItemID int64 = 1_052_718_829_566 // >= 1T but a corp office item
+	const structureID int64 = 1_000_000_000_003
 
 	var insertedLocations []store.InsertLocationParams
 
@@ -337,8 +230,10 @@ func TestResolveLocationIDs_Structure_404_StoresSentinel(t *testing.T) {
 		listCharsFunc: func() ([]store.Character, error) {
 			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
 		},
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{officeItemID}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: structureID, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			return store.EveLocation{}, errors.New("not found")
@@ -361,8 +256,8 @@ func TestResolveLocationIDs_Structure_404_StoresSentinel(t *testing.T) {
 	if len(insertedLocations) != 1 {
 		t.Fatalf("expected 1 InsertLocation call for 404 structure, got %d", len(insertedLocations))
 	}
-	if insertedLocations[0].ID != officeItemID {
-		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	if insertedLocations[0].ID != structureID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, structureID)
 	}
 	if insertedLocations[0].Name != corpHangarSentinel {
 		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
@@ -373,7 +268,7 @@ func TestResolveLocationIDs_Structure_404_StoresSentinel(t *testing.T) {
 // Verifies that the system name is fetched from eve_locations cache rather than ESI
 // when it was already resolved for a prior structure in the same system.
 func TestResolveLocationIDs_Structure_CachedSystemName(t *testing.T) {
-	const structureID int64 = 1_000_000_000_003
+	const structureID int64 = 1_000_000_000_004
 	const systemID int64 = 30000142
 
 	systemESICallCount := 0
@@ -383,8 +278,10 @@ func TestResolveLocationIDs_Structure_CachedSystemName(t *testing.T) {
 		listCharsFunc: func() ([]store.Character, error) {
 			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
 		},
-		listBlueprintLocationIDsByOwnerFunc: func(_ store.ListBlueprintLocationIDsByOwnerParams) ([]int64, error) {
-			return []int64{structureID}, nil
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: structureID, LocationFlag: "Hangar"},
+			}, nil
 		},
 		getLocationFunc: func(id int64) (store.EveLocation, error) {
 			if id == systemID {
@@ -420,5 +317,285 @@ func TestResolveLocationIDs_Structure_CachedSystemName(t *testing.T) {
 	// Only the structure should be inserted (system was cached).
 	if len(insertedIDs) != 1 || insertedIDs[0] != structureID {
 		t.Errorf("expected only structure %d to be inserted, got %v", structureID, insertedIDs)
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_ResolvesViaCorpAssets_NPCStation ---
+// Verifies that a corp blueprint with CorpSAG flag resolves to station name via corp_assets + GetStation.
+func TestResolveLocationIDs_CorpHangar_ResolvesViaCorpAssets_NPCStation(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_566
+	const stationID int64 = 60015146
+	const stationName = "Ibura IX - Moon 11 - Spacelane Patrol Testing Facilities"
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpSAG3"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		getCorpAssetFunc: func(itemID int64) (store.GetCorpAssetRow, error) {
+			if itemID != officeItemID {
+				t.Errorf("GetCorpAsset: unexpected itemID %d", itemID)
+			}
+			return store.GetCorpAssetRow{LocationID: stationID, LocationType: "station"}, nil
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		getStationFunc: func(_ context.Context, id int64) (string, error) {
+			if id != stationID {
+				t.Errorf("GetStation: unexpected id %d", id)
+			}
+			return stationName, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != stationName {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, stationName)
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel ---
+// Verifies that a corp blueprint whose office item ID is not in corp_assets gets sentinel stored.
+func TestResolveLocationIDs_CorpHangar_AssetNotFound_StoresSentinel(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_567
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpSAG1"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		getCorpAssetFunc: func(_ int64) (store.GetCorpAssetRow, error) {
+			return store.GetCorpAssetRow{}, errors.New("not found")
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call for sentinel, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != corpHangarSentinel {
+		t.Errorf("InsertLocation Name (asset not found): got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_AlreadyCached_NoESICalls ---
+// Verifies that a corp hangar office item ID already in eve_locations is not re-resolved.
+func TestResolveLocationIDs_CorpHangar_AlreadyCached_NoESICalls(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_568
+
+	getCorpAssetCalled := false
+
+	q := &mockQuerier{
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpSAG2"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			// Already cached.
+			return store.EveLocation{ID: id, Name: "Some Station", ResolvedAt: time.Now()}, nil
+		},
+		getCorpAssetFunc: func(_ int64) (store.GetCorpAssetRow, error) {
+			getCorpAssetCalled = true
+			return store.GetCorpAssetRow{}, nil
+		},
+	}
+
+	esiMock := &mockESIClient{}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if getCorpAssetCalled {
+		t.Error("GetCorpAsset must not be called when corp hangar location is already cached")
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_ResolvesViaCorpAssets_Structure ---
+// Verifies that a corp hangar flag with a structure ID in corp_assets resolves
+// via GetUniverseStructure and stores "System — StructureName".
+func TestResolveLocationIDs_CorpHangar_ResolvesViaCorpAssets_Structure(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_569
+	const structureID int64 = 1_000_000_000_005
+	const systemID int64 = 30000142
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listCharsFunc: func() ([]store.Character, error) {
+			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
+		},
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpSAG4"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			if id == systemID {
+				return store.EveLocation{ID: id, Name: "Jita"}, nil
+			}
+			return store.EveLocation{}, errors.New("not found")
+		},
+		getCorpAssetFunc: func(itemID int64) (store.GetCorpAssetRow, error) {
+			if itemID != officeItemID {
+				t.Errorf("GetCorpAsset: unexpected itemID %d", itemID)
+			}
+			return store.GetCorpAssetRow{LocationID: structureID, LocationType: "structure"}, nil
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		getUniverseStructFunc: func(_ context.Context, id int64, _ string) (esi.UniverseStructure, error) {
+			if id != structureID {
+				t.Errorf("GetUniverseStructure: unexpected id %d", id)
+			}
+			return esi.UniverseStructure{Name: "Keepstar", SolarSystemID: systemID}, nil
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	wantName := "Jita \u2014 Keepstar"
+	if insertedLocations[0].Name != wantName {
+		t.Errorf("InsertLocation Name: got %q, want %q", insertedLocations[0].Name, wantName)
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_Structure_403_Skipped ---
+// Verifies that a 403 from GetUniverseStructure for a corp hangar structure does not insert.
+func TestResolveLocationIDs_CorpHangar_Structure_403_Skipped(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_570
+	const structureID int64 = 1_000_000_000_006
+
+	insertCalled := false
+
+	q := &mockQuerier{
+		listCharsFunc: func() ([]store.Character, error) {
+			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
+		},
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpDeliveries"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		getCorpAssetFunc: func(_ int64) (store.GetCorpAssetRow, error) {
+			return store.GetCorpAssetRow{LocationID: structureID, LocationType: "structure"}, nil
+		},
+		insertLocationFunc: func(_ store.InsertLocationParams) error {
+			insertCalled = true
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		getUniverseStructFunc: func(_ context.Context, _ int64, _ string) (esi.UniverseStructure, error) {
+			return esi.UniverseStructure{}, esi.ErrForbidden
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if insertCalled {
+		t.Error("InsertLocation must not be called for a 403 structure in corp hangar resolution")
+	}
+}
+
+// --- TestResolveLocationIDs_CorpHangar_Structure_404_StoresSentinel ---
+// Verifies that a 404 from GetUniverseStructure for a corp hangar stores sentinel.
+func TestResolveLocationIDs_CorpHangar_Structure_404_StoresSentinel(t *testing.T) {
+	const officeItemID int64 = 1_052_718_829_571
+	const structureID int64 = 1_000_000_000_007
+
+	var insertedLocations []store.InsertLocationParams
+
+	q := &mockQuerier{
+		listCharsFunc: func() ([]store.Character, error) {
+			return []store.Character{{ID: 1, Name: "TestChar", AccessToken: "tok"}}, nil
+		},
+		listBlueprintLocationsByOwnerFunc: func(_ store.ListBlueprintLocationsByOwnerParams) ([]store.ListBlueprintLocationsByOwnerRow, error) {
+			return []store.ListBlueprintLocationsByOwnerRow{
+				{LocationID: officeItemID, LocationFlag: "CorpSAG5"},
+			}, nil
+		},
+		getLocationFunc: func(id int64) (store.EveLocation, error) {
+			return store.EveLocation{}, errors.New("not found")
+		},
+		getCorpAssetFunc: func(_ int64) (store.GetCorpAssetRow, error) {
+			return store.GetCorpAssetRow{LocationID: structureID, LocationType: "structure"}, nil
+		},
+		insertLocationFunc: func(arg store.InsertLocationParams) error {
+			insertedLocations = append(insertedLocations, arg)
+			return nil
+		},
+	}
+
+	esiMock := &mockESIClient{
+		getUniverseStructFunc: func(_ context.Context, _ int64, _ string) (esi.UniverseStructure, error) {
+			return esi.UniverseStructure{}, esi.ErrNotFound
+		},
+	}
+
+	w := New(q, esiMock, time.Minute)
+	w.resolveLocationIDs(context.Background(), ownerTypeCorporation, 99000001)
+
+	if len(insertedLocations) != 1 {
+		t.Fatalf("expected 1 InsertLocation call for sentinel, got %d", len(insertedLocations))
+	}
+	if insertedLocations[0].ID != officeItemID {
+		t.Errorf("InsertLocation ID: got %d, want %d", insertedLocations[0].ID, officeItemID)
+	}
+	if insertedLocations[0].Name != corpHangarSentinel {
+		t.Errorf("InsertLocation Name (404): got %q, want %q", insertedLocations[0].Name, corpHangarSentinel)
 	}
 }

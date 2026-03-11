@@ -44,7 +44,6 @@ type Client interface {
 	GetCharacterJobs(ctx context.Context, characterID int64, token string) ([]Job, time.Time, error)
 	GetCorporationJobs(ctx context.Context, corporationID int64, token string) ([]Job, time.Time, error)
 	GetCorporationAssets(ctx context.Context, corpID int64, token string, page int) ([]CorpAsset, int, time.Time, error)
-	GetCorporationOffices(ctx context.Context, corporationID int64, token string) ([]CorporationOffice, error)
 	GetStation(ctx context.Context, stationID int64) (string, error)
 	GetUniverseStructure(ctx context.Context, structureID int64, token string) (UniverseStructure, error)
 	GetUniverseSystem(ctx context.Context, systemID int64) (string, error)
