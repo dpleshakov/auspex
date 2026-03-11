@@ -9,11 +9,21 @@ import { getBlueprints } from '../api/client.js'
 
 const ALARM_HOURS = 24
 
+// Returns true when a job is effectively ready — either ESI already marked it
+// ready, or it is still "active" but its end_date has already passed.
+function isEffectivelyReady(job) {
+  if (job.status === 'ready') return true
+  if (job.status === 'active' && job.end_date) {
+    return new Date(job.end_date) <= new Date()
+  }
+  return false
+}
+
 // Full status label for job status.
 function getFullStatusLabel(row) {
   const job = row.job
   if (!job) return 'Idle'
-  if (job.status === 'ready') return 'Ready'
+  if (isEffectivelyReady(job)) return 'Ready'
   switch (job.activity) {
     case 'me_research': return 'ME Research'
     case 'te_research': return 'TE Research'
@@ -26,7 +36,7 @@ function getFullStatusLabel(row) {
 function getRowClass(row) {
   const job = row.job
   if (!job) return ''
-  if (job.status === 'ready') return 'bp-table__row--overdue'
+  if (isEffectivelyReady(job)) return 'bp-table__row--overdue'
   if (job.status === 'active' && job.end_date) {
     const msUntilEnd = new Date(job.end_date) - new Date()
     if (msUntilEnd <= ALARM_HOURS * 60 * 60 * 1000) return 'bp-table__row--completing-today'

@@ -32,7 +32,8 @@ WHERE NOT EXISTS (
 
 -- name: CountReadyJobs :one
 SELECT COUNT(*) FROM jobs
-WHERE status = 'ready';
+WHERE status = 'ready'
+   OR (status = 'active' AND end_date < datetime('now'));
 
 -- name: ListCharacterSlotUsage :many
 SELECT

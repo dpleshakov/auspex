@@ -27,6 +27,7 @@ func (q *Queries) CountIdleBlueprints(ctx context.Context) (int64, error) {
 const countReadyJobs = `-- name: CountReadyJobs :one
 SELECT COUNT(*) FROM jobs
 WHERE status = 'ready'
+   OR (status = 'active' AND end_date < datetime('now'))
 `
 
 func (q *Queries) CountReadyJobs(ctx context.Context) (int64, error) {
