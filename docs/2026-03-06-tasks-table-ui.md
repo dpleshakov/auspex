@@ -58,6 +58,7 @@ Rewrite `getFullStatusLabel()` and `getRowClass()` accordingly. The label "Overd
 - `formatLocalDate` is the single place for date formatting — no inline `toLocaleString` calls elsewhere
 
 **Definition of done:** working code + committed
+**Status:** ✅ Done
 
 ---
 
