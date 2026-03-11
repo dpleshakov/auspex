@@ -159,13 +159,14 @@ export default function BlueprintTable({ blueprints: externalBlueprints }) {
     {
       id: 'end_date',
       header: 'Date End',
-      accessorFn: row => row.job?.end_date ?? null,
-      cell: ({ getValue }) => formatLocalDate(getValue()),
+      accessorFn: row => row.job?.end_date,
+      cell: ({ row }) => formatLocalDate(row.original.job?.end_date),
+      sortUndefined: 'last',
       sortingFn: (rowA, rowB) => {
         const a = rowA.original.job?.end_date
         const b = rowB.original.job?.end_date
         if (!a && !b) return 0
-        if (!a) return 1   // nulls last
+        if (!a) return 1
         if (!b) return -1
         return new Date(a) - new Date(b)
       },
