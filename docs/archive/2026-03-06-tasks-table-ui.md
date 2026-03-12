@@ -1,6 +1,6 @@
 # 2026-03-06-tasks-table-ui.md
 
-**Status:** Active
+**Status:** Archived
 
 ### Contracts
 
