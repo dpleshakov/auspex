@@ -80,7 +80,7 @@ Fix in the TanStack Table `sortingFn` for the `end_date` column: treat `null`/`u
 - Code: security, error handling, readability, obvious performance issues
 - Security: input validation, no tokens in logs, errors do not expose internal details, dependency vulnerability check
 - Documentation: verify `technical-reference.md` matches reality — update if not; verify `architecture.md` — update if needed
-**Status:** ⬜ Pending
+**Status:** ✅ Done
 
 ---
 

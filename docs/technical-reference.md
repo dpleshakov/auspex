@@ -417,7 +417,7 @@ Returns aggregate counts and per-character slot usage for the dashboard summary 
 | Field | Type | Description |
 |-------|------|-------------|
 | `idle_blueprints` | integer | BPOs with no active or ready job |
-| `ready_jobs` | integer | Jobs with `status = "ready"` (finished, not yet collected) |
+| `ready_jobs` | integer | Jobs that are effectively ready: `status = "ready"`, or `status = "active"` with `end_date` in the past (ESI transition lag) |
 | `free_research_slots` | integer | Always `0` in MVP (requires per-character skill data) |
 | `characters` | array | Per-character slot usage |
 | `characters[].id` | integer | EVE character ID |
