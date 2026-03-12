@@ -12,8 +12,8 @@ A local desktop tool for EVE Online industrialists who manage multiple manufactu
 
 - Multi-character and corporation support via EVE SSO OAuth2; corporations are tracked automatically when a character is added
 - Unified BPO table with ME%, TE%, status, owner, resolved location name, and job end date
-- Row highlighting: red for overdue jobs, yellow for jobs completing today
-- Summary bar: idle BPOs / overdue / completing today / free research slots
+- Row highlighting: red for ready jobs (finished, awaiting collection), yellow for jobs completing within the next 24 hours
+- Summary bar: idle BPOs / ready jobs / free research slots
 - Per-character slot usage
 - Sort by any column; filter by status, owner, and category
 - Auto-refresh on a configurable interval with manual force-refresh

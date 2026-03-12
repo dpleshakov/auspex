@@ -13,6 +13,16 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Blueprint table now shows human-readable location names (NPC stations, player structures, and corporation offices); names are resolved automatically after the first sync cycle.
 
+### Changed
+
+- Summary bar "Ready jobs" count now includes all jobs with status Ready regardless of end date; the "Completing today" tile has been removed.
+- Row highlighting reworked: red marks blueprints with a ready job (finished, awaiting collection at the station); yellow marks active jobs completing within the next 24 hours.
+- Idle blueprints (no active job, shown as —) now always sort to the bottom of the table when sorting by end date, regardless of sort direction.
+
+### Fixed
+
+- Date columns now always display in 24-hour format regardless of the operating system locale.
+
 ### Fixed
 
 - Corporation blueprint location names now resolve correctly to the real station or structure name; blueprints stored in corporation hangar divisions (CorpSAG slots) were previously stuck on "Resolving…" indefinitely.
